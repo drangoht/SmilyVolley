@@ -149,9 +149,10 @@ Trois échanges capturés sur chaque build, vitesse de la balle relevée image p
 | Temps de vol au-dessus de 15 u/s | 0 % | 13,5 % |
 
 **Le son et les particules suivent.** Un smash ne peut pas sonner comme une reprise
-molle : la hauteur du son monte de 6 % à la frappe la plus dure, le volume de 22 %, et la
-bouffée de particules triple. C'est le timbre, plus que le niveau, qui dit la force d'un
-choc.
+molle. La hauteur du son va de **0,94 au plancher à 1,14 au maximum**, soit un cinquième
+d'écart d'un bout à l'autre, tandis que le volume ne bouge que de 22 % : c'est le timbre,
+plus que le niveau, qui dit la force d'un choc. La bouffée de particules, elle, passe de
+70 % à 200 % de sa taille nominale.
 
 ### 2.3 Le contrôle sec
 
