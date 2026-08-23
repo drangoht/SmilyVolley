@@ -456,6 +456,7 @@ fichier par fichier dans `Assets/Audio/Kenney/SOURCE.md`.
 | Frappe sur un blob | `impactSoft_medium` | 0,80 |
 | Rebond mur / filet / plafond | `impactPlate_light` | 0,45 × force de l'impact |
 | Balle sur le sable | `impactSoft_heavy` | 0,70 |
+| Appui du saut | `footstep_snow`, ×1,25 de hauteur | 0,14 |
 | Atterrissage d'un blob | `footstep_snow` | 0,22 × vitesse de chute |
 | Point marqué | `impactBell_heavy` | 0,65 |
 | Fin de match | `impactBell_heavy`, arpège 0-4-7-12 demi-tons | 0,75 |
@@ -473,6 +474,30 @@ Trois principes :
 La fanfare de fin de match n'est pas un fichier : le pack n'en fournit pas, alors
 `GameAudio` rejoue la cloche du point sur une montée d'accord parfait, en repitchant
 d'un rapport 2^(n/12) par demi-ton.
+
+**Le saut n'a pas de son dédié, et c'est un choix mesuré.** Les banques d'effets de saut
+libres consultées ne convenaient pas : les échantillons du pack *Jump Sounds* de rudy85
+(CC0) durent 1,85 à 2,50 s, quand toute la palette du jeu tient sous 0,54 s — dans un jeu
+où les blobs sautent sans arrêt, un son de deux secondes se superpose à lui-même et prend
+toute la place. Les autres pistes menaient à des ressorts de dessin animé ou à des boucles
+de whoosh d'arme blanche. L'appui reprend donc le pas dans le sable, plus discret et plus
+aigu que la réception, ce qui est aussi le geste réel.
+
+**Musique** : *Feel Good Island Loop* de **Brandon Morris**
+([OpenGameArt](https://opengameart.org/content/feel-good-island-loop)), en **CC0**.
+Boucle tropicale de 51,7 s, choisie sur des critères vérifiables plutôt qu'à l'oreille :
+
+| Grandeur | Valeur | Ce qu'elle garantit |
+|---|---|---|
+| Durée | 51,7 s | Assez longue pour ne pas lasser sur un match de 3 à 6 min |
+| Discontinuité au raccord | 0,0004 | Aucun clic au bouclage |
+| RMS par tranche de 5 s | 0,219 → 0,256 | Niveau régulier, aucun passage ne saute aux oreilles |
+| Centroïde spectral | 306 Hz | Timbre chaud, qui ne masque pas les impacts |
+
+Le morceau a un niveau proche de celui des effets (RMS 0,243) : il est joué à **0,25**,
+soit une douzaine de décibels sous les frappes. Mesuré en sortie de mixeur, la musique
+seule culmine à 0,06–0,10 de RMS quand l'action monte à 0,27–0,36. Démarrage en fondu de
+1,5 s, pour ne pas attaquer à plein volume sur la première image.
 
 ---
 
@@ -563,6 +588,8 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 | `Audio` *(GameAudio)* | `Pitch Jitter` | Variation de hauteur ; 0 = répétition mécanique |
 | `Audio` *(GameAudio)* | `Voice Count` | Sons pouvant se superposer |
 | `Audio` *(GameAudio)* | `Victory Semitones` | Notes de la fanfare de fin de match |
+| `Audio` *(GameAudio)* | `Music Volume`, `Music Fade In Seconds` | Présence de la musique |
+| `Audio` *(GameAudio)* | `Jump Volume`, `Jump Pitch` | Discrétion de l'appui du saut |
 | `ImpactEffects` | `Hit / Ball Land / Blob Land / Bounce Particles` | Densité des bouffées |
 
 ---
@@ -573,7 +600,9 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 
 - ~~**Sons.**~~ Fait : frappe, rebonds, point, fin de match (§ 10).
 - ~~**Particules d'impact.**~~ Fait : éclat, gerbe de sable, étincelle (§ 10).
-- **Musique de fond** discrète, et un son de saut — les deux manquent encore.
+- ~~**Musique de fond** et son de saut.~~ Fait (§ 10).
+- **Réglage du volume** dans un menu d'options : la musique et les effets n'ont pour
+  l'instant de curseur que dans l'Inspector.
 - **Menu principal** : choix du mode, difficulté nommée (Tranquille / Normal / Redoutable),
   score cible, options d'écran.
 

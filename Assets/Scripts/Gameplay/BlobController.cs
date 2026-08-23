@@ -20,6 +20,9 @@ namespace SmilyVolley
         /// </summary>
         public event System.Action<Vector2, float> Landed;
 
+        /// <summary>Le blob vient de quitter le sol : position de l'appui.</summary>
+        public event System.Action<Vector2> Jumped;
+
         [Header("Déplacement")]
         public float moveSpeed = 6.5f;
         public float jumpSpeed = 9.7f;
@@ -121,6 +124,7 @@ namespace SmilyVolley
                     velocity.y = jumpSpeed;
                     grounded = false;
                     squash = 1.18f;
+                    Jumped?.Invoke(new Vector2(body.position.x, groundY));
                 }
             }
             else

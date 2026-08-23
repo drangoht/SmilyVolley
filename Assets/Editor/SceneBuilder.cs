@@ -45,6 +45,7 @@ namespace SmilyVolley.EditorTools
         const int OrderBorder = 50;
 
         const string AudioFolder = "Assets/Audio/Kenney";
+        const string MusicFolder = "Assets/Audio/Music";
 
         static readonly Color SandColor = new Color(0.93f, 0.82f, 0.58f);
         static readonly Color SandLineColor = new Color(0.78f, 0.66f, 0.44f);
@@ -603,6 +604,26 @@ namespace SmilyVolley.EditorTools
             audio.ballLandClips = LoadClips("impactSoft_heavy");
             audio.blobLandClips = LoadClips("footstep_snow");
             audio.pointClips = LoadClips("impactBell_heavy");
+            audio.musicClip = LoadMusic();
+        }
+
+        /// <summary>Premier morceau trouvé dans le dossier de musique. Absent : le jeu se joue en silence.</summary>
+        static AudioClip LoadMusic()
+        {
+            if (!AssetDatabase.IsValidFolder(MusicFolder))
+            {
+                Debug.LogWarning("Dossier de musique absent : " + MusicFolder);
+                return null;
+            }
+
+            foreach (string guid in AssetDatabase.FindAssets("t:AudioClip", new[] { MusicFolder }))
+            {
+                var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(AssetDatabase.GUIDToAssetPath(guid));
+                if (clip != null) return clip;
+            }
+
+            Debug.LogWarning("Aucune musique trouvée dans " + MusicFolder);
+            return null;
         }
 
         /// <summary>
@@ -613,13 +634,26 @@ namespace SmilyVolley.EditorTools
         /// </summary>
         static void ConfigureAudioImport()
         {
-            foreach (string guid in AssetDatabase.FindAssets("t:AudioClip", new[] { AudioFolder }))
+            // Effets courts : décompressés une fois pour toutes, et ramenés en mono
+            // puisque le mixage est entièrement 2D.
+            ImportAudio(AudioFolder, AudioClipLoadType.DecompressOnLoad, mono: true);
+
+            // Musique : surtout pas DecompressOnLoad. Les 52 s du morceau occuperaient
+            // près de 9 Mo de RAM en PCM, contre 350 Ko en restant compressés.
+            ImportAudio(MusicFolder, AudioClipLoadType.CompressedInMemory, mono: false);
+        }
+
+        static void ImportAudio(string folder, AudioClipLoadType loadType, bool mono)
+        {
+            if (!AssetDatabase.IsValidFolder(folder)) return;
+
+            foreach (string guid in AssetDatabase.FindAssets("t:AudioClip", new[] { folder }))
             {
                 string path = AssetDatabase.GUIDToAssetPath(guid);
                 if (AssetImporter.GetAtPath(path) is not AudioImporter importer) continue;
 
                 AudioImporterSampleSettings settings = importer.defaultSampleSettings;
-                settings.loadType = AudioClipLoadType.DecompressOnLoad;
+                settings.loadType = loadType;
                 settings.compressionFormat = AudioCompressionFormat.Vorbis;
                 settings.quality = 0.7f;
                 // Depuis Unity 6, le préchargement est un réglage par plateforme porté
@@ -627,7 +661,7 @@ namespace SmilyVolley.EditorTools
                 settings.preloadAudioData = true;
 
                 importer.defaultSampleSettings = settings;
-                importer.forceToMono = true;
+                importer.forceToMono = mono;
                 importer.SaveAndReimport();
             }
         }

@@ -97,13 +97,22 @@ Chaque impact a un retour sonore et visuel :
 | Balle frappée par un blob | Impact mat | Éclat jaune pâle |
 | Rebond mur / filet / plafond | Tap léger, volume selon la force | Étincelle blanche |
 | Balle sur le sable | Impact sourd | Gerbe de sable |
+| Blob qui saute | Pas dans le sable, discret et plus aigu | — |
 | Blob qui atterrit | Pas dans le sable, selon la vitesse de chute | Poussière proportionnelle |
 | Point marqué | Cloche | — |
 | Fin de match | Arpège de cloches | — |
 
-Les sons viennent du pack **Impact Sounds** de [Kenney](https://kenney.nl/assets/impact-sounds),
-en **CC0** — domaine public, aucune attribution exigée (elle est faite ici de bon gré).
-Détail fichier par fichier dans [`Assets/Audio/Kenney/SOURCE.md`](Assets/Audio/Kenney/SOURCE.md).
+Une **musique de fond** tourne en boucle : *Feel Good Island Loop* de **Brandon Morris**
+([OpenGameArt](https://opengameart.org/content/feel-good-island-loop)), en **CC0**. Elle
+est jouée à 0,25 de volume, soit une douzaine de décibels sous les frappes — le morceau
+a un niveau proche de celui des effets, le baisser est ce qui le place derrière l'action.
+Démarrage en fondu de 1,5 s.
+
+Les effets viennent du pack **Impact Sounds** de [Kenney](https://kenney.nl/assets/impact-sounds),
+également en **CC0** — domaine public, aucune attribution exigée dans les deux cas (elle
+est faite ici de bon gré). Détail fichier par fichier dans
+[`Assets/Audio/Kenney/SOURCE.md`](Assets/Audio/Kenney/SOURCE.md) et
+[`Assets/Audio/Music/SOURCE.md`](Assets/Audio/Music/SOURCE.md).
 
 Cinq variantes par événement, tirées au hasard et repitchées de ±12 % : c'est la
 répétition à l'identique que l'oreille repère, pas le son. Sans cette variation, un
@@ -122,7 +131,8 @@ répétition à l'identique que l'oreille repère, pas le son. Sans cette variat
 ```
 Assets/
 ├── Art/                 Sprites générés par code + matériaux physiques
-├── Audio/Kenney/        Sons CC0 + licence et provenance
+├── Audio/Kenney/        Effets CC0 + licence et provenance
+├── Audio/Music/         Musique CC0 + licence et provenance
 ├── Settings/            Pipeline URP, Renderer 2D, volume profile par défaut
 ├── Editor/              → assembly SmilyVolley.Editor (exclue du build)
 │   ├── PlaceholderArt.cs      Dessine les PNG (blobs, balle, filet, ciel, ombre)
@@ -196,6 +206,8 @@ la porte ouverte aux effets d'éclairage 2D (halo sur la balle, ombres portées,
 | `Ball` (Rigidbody2D) | `Gravity Scale` | Balle flottante ou lourde |
 | `BlobLeft` / `BlobRight` | `Move Speed`, `Jump Speed`, `Gravity` | Sensation de déplacement |
 | `Audio` | Volumes par événement, `Pitch Jitter` | Équilibre et variété du mixage |
+| `Audio` | `Music Volume`, `Music Fade In Seconds` | Présence de la musique |
+| `Audio` | `Jump Volume`, `Jump Pitch` | Discrétion de l'appui du saut |
 | `ImpactEffects` | Nombre de particules par effet | Densité des bouffées |
 
 ## Notes de performance
@@ -215,7 +227,6 @@ Le jeu est léger, mais le code évite les schémas qui coûtent cher dès qu'un
 
 ## Pistes pour la suite
 
-- Musique de fond discrète, et un son de saut
 - Menu principal, sélection de mode et écran d'options
 - Effet de rotation sur la balle influençant la trajectoire
 - Sprites définitifs en remplacement des PNG générés

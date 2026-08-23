@@ -25,12 +25,25 @@ namespace SmilyVolley
         public AudioClip[] blobLandClips;
         public AudioClip[] pointClips;
 
+        [Header("Musique")]
+        public AudioClip musicClip;
+        [Tooltip("Le morceau a un niveau proche de celui des effets : le baisser est ce qui " +
+                 "le place derrière l'action au lieu de la concurrencer.")]
+        [Range(0f, 1f)] public float musicVolume = 0.25f;
+        public float musicFadeInSeconds = 1.5f;
+
         [Header("Volumes")]
         [Range(0f, 1f)] public float blobHitVolume = 0.80f;
         [Range(0f, 1f)] public float bounceVolume = 0.45f;
         [Range(0f, 1f)] public float ballLandVolume = 0.70f;
         [Range(0f, 1f)] public float blobLandVolume = 0.22f;
         [Range(0f, 1f)] public float pointVolume = 0.65f;
+        [Tooltip("Appui du saut. Les blobs sautent sans arrêt : ce son doit rester en retrait " +
+                 "de l'atterrissage, sinon il occupe tout le mixage.")]
+        [Range(0f, 1f)] public float jumpVolume = 0.14f;
+        [Tooltip("Le saut réutilise le son de pas dans le sable, monté en hauteur : un appui " +
+                 "est un frottement plus vif et plus léger qu'une réception.")]
+        public float jumpPitch = 1.25f;
 
         [Header("Variation")]
         [Tooltip("Écart de hauteur appliqué à chaque son, en proportion (0,12 = ±12 %).")]
@@ -47,8 +60,10 @@ namespace SmilyVolley
         // Un AudioSource ne porte qu'une hauteur à la fois : PlayOneShot sur une source
         // unique donnerait la même à tous les sons simultanés. D'où le tourniquet.
         AudioSource[] voices;
+        AudioSource music;
         int nextVoice;
         int victoryNote;
+        float musicFadeStart;
 
         void Awake()
         {
@@ -63,6 +78,37 @@ namespace SmilyVolley
                 source.spatialBlend = 0f;
                 voices[i] = source;
             }
+
+            music = gameObject.AddComponent<AudioSource>();
+            music.playOnAwake = false;
+            music.loop = true;
+            music.spatialBlend = 0f;
+            music.clip = musicClip;
+        }
+
+        void Start()
+        {
+            if (musicClip == null || music == null) return;
+
+            // Démarrage en fondu : la musique attaque à plein volume dès l'image 1 sinon,
+            // juste au moment où le joueur découvre l'écran.
+            musicFadeStart = Time.time;
+            music.volume = musicFadeInSeconds > 0f ? 0f : musicVolume;
+            music.Play();
+        }
+
+        void Update()
+        {
+            if (music == null || !music.isPlaying) return;
+
+            float target = musicVolume;
+            if (musicFadeInSeconds > 0f)
+            {
+                float t = Mathf.Clamp01((Time.time - musicFadeStart) / musicFadeInSeconds);
+                target *= t;
+            }
+
+            if (!Mathf.Approximately(music.volume, target)) music.volume = target;
         }
 
         void OnEnable()
@@ -80,8 +126,17 @@ namespace SmilyVolley
                 manager.MatchWon += OnMatchWon;
             }
 
-            if (leftBlob != null) leftBlob.Landed += OnBlobLanded;
-            if (rightBlob != null) rightBlob.Landed += OnBlobLanded;
+            if (leftBlob != null)
+            {
+                leftBlob.Landed += OnBlobLanded;
+                leftBlob.Jumped += OnBlobJumped;
+            }
+
+            if (rightBlob != null)
+            {
+                rightBlob.Landed += OnBlobLanded;
+                rightBlob.Jumped += OnBlobJumped;
+            }
         }
 
         void OnDisable()
@@ -99,8 +154,17 @@ namespace SmilyVolley
                 manager.MatchWon -= OnMatchWon;
             }
 
-            if (leftBlob != null) leftBlob.Landed -= OnBlobLanded;
-            if (rightBlob != null) rightBlob.Landed -= OnBlobLanded;
+            if (leftBlob != null)
+            {
+                leftBlob.Landed -= OnBlobLanded;
+                leftBlob.Jumped -= OnBlobJumped;
+            }
+
+            if (rightBlob != null)
+            {
+                rightBlob.Landed -= OnBlobLanded;
+                rightBlob.Jumped -= OnBlobJumped;
+            }
 
             CancelInvoke();
         }
@@ -125,6 +189,15 @@ namespace SmilyVolley
             if (force < 0.15f) return;
             Play(blobLandClips, blobLandVolume * force);
         }
+
+        /// <summary>
+        /// Appui du saut. Faute d'un son dédié convaincant — les banques d'effets de saut
+        /// libres tiennent du ressort de dessin animé, ou durent deux secondes là où toute
+        /// la palette du jeu vit sous une demi-seconde — on reprend le pas dans le sable,
+        /// monté en hauteur et nettement plus discret. C'est aussi le geste réel : quitter
+        /// le sable et y retomber font le même bruit, en plus vif à l'appui.
+        /// </summary>
+        void OnBlobJumped(Vector2 position) => Play(blobLandClips, jumpVolume, jumpPitch);
 
         void OnPointScored(Side winner) => Play(pointClips, pointVolume);
 
