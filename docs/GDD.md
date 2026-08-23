@@ -128,9 +128,9 @@ Toute seconde où la balle est hors de vue est une seconde perdue.
    │                                                              │
    ▼                                                              │
 Service ──1,1 s──▶ Échange ──balle au sol──▶ Point ──1,8 s──▶ ────┘
-(balle figée      (rally libre,            (la balle s'arrête net
- au-dessus du      aucune limite            et se replace côté
- serveur)          de touches)              perdant : score, message)
+(balle figée,     (rally libre,            (la balle s'arrête net
+ blobs bloqués     aucune limite            et se replace côté
+ sur leur ligne)   de touches)              perdant : score, message)
                                                   │
                                        15 pts et 2 d'écart
                                                   ▼
@@ -151,7 +151,7 @@ brouiller la lecture du point qui vient d'être marqué.
 
 | Phase | Durée | Intention |
 |---|---|---|
-| Service | 1,1 s | Laisser le temps de se replacer, sans casser le rythme |
+| Service | 1,1 s | Lire qui engage et se préparer — les deux camps sont bloqués |
 | Échange | variable | Le cœur du jeu |
 | Point marqué | 1,8 s | Lire le score et le message, souffler — balle immobile |
 
@@ -182,6 +182,14 @@ c'est délibéré : en rally point, laisser le service au gagnant crée des sér
 > Cette règle est neutralisée automatiquement si `Side Out Scoring` est actif : dans
 > ce mode, seul le serveur marque, donc donner le service au perdant empêcherait le
 > score de monter.
+
+**Les deux camps sont bloqués pendant tout le service.** Les blobs sont replacés sur
+leur ligne de départ et ne répondent plus aux commandes jusqu'au lâcher de balle ; ils
+retrouvent la main exactement à l'image où celle-ci part. Sans ce blocage le
+replacement ne servait à rien : chacun repartait aussitôt pendant la seconde d'attente,
+et le relanceur pouvait déjà se poster sous la balle avant qu'elle ne tombe. La
+contrainte vaut pour l'IA comme pour le joueur — elle passe par la même abstraction
+d'entrée.
 
 La balle rejoint sa position d'engagement — 3,6 unités au-dessus de la **position de
 départ** du blob serveur, décalée de 0,4 unité vers le filet — dès l'attribution du

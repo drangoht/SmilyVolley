@@ -53,7 +53,9 @@ scène. Le projet se clone et se lance tel quel.
 - **L'échange s'arrête à l'instant du point** : la balle sort de la simulation et se
   replace aussitôt au-dessus du camp qui va engager, au lieu de continuer à rebondir
   pendant la pause.
-- Service automatique après 1,1 s, au-dessus du joueur qui engage.
+- Service automatique après 1,1 s, au-dessus du joueur qui engage. **Les deux camps
+  sont bloqués sur leur ligne de départ pendant ce compte à rebours** et retrouvent la
+  main à l'image exacte où la balle part.
 - Comptage *rally point* par défaut ; cocher `Side Out Scoring` sur le `GameManager`
   pour revenir au comptage historique (seul le serveur marque).
 

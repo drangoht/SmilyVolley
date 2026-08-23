@@ -192,8 +192,11 @@ namespace SmilyVolley
             leftScore = 0;
             rightScore = 0;
             server = Side.Left;
-            SetBlobsFrozen(false);
             if (hud != null) hud.SetScore(0, 0);
+
+            // Pas de dégel ici : StartServe est seul maître du blocage des blobs, et il
+            // les fige de toute façon jusqu'au lâcher de balle — y compris en sortant
+            // d'un match terminé, où ils étaient déjà bloqués.
             StartServe();
         }
 
@@ -205,6 +208,11 @@ namespace SmilyVolley
 
             if (leftBlob != null) leftBlob.ResetToStart();
             if (rightBlob != null) rightBlob.ResetToStart();
+
+            // Les deux camps sont bloqués jusqu'au lâcher de balle. Sans cela, le replacement
+            // au service ne servait à rien : chacun repartait aussitôt du pied gauche pendant
+            // la seconde d'attente, et le relanceur pouvait déjà se poster sous la balle.
+            SetBlobsFrozen(true);
 
             PlaceBallForServe();
 
@@ -238,7 +246,12 @@ namespace SmilyVolley
         {
             yield return new WaitForSeconds(serveDelay);
             if (hud != null) hud.ClearMessage();
+
+            // Rendre la main exactement au moment où la balle part : les deux joueurs
+            // partent de la même ligne, personne n'a d'avance sur l'autre.
+            SetBlobsFrozen(false);
             if (ball != null) ball.Release();
+
             state = MatchState.Rally;
             pendingRoutine = null;
         }
