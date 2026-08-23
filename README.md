@@ -35,6 +35,7 @@ La navigation est au clavier — `↑ ↓` naviguer, `← →` régler, `Entrée
 | **Adversaire** | Ordinateur ou humain ; difficulté de Tranquille à Implacable |
 | **Règles** | Points pour gagner, écart de deux, touches par camp, comptage, camp qui engage |
 | **Son** | Musique et effets |
+| **Apparence** | Style des blobs : Rond, Mou ou Anguleux |
 | **Affichage** | Plein écran |
 
 Tout est conservé d'une partie à l'autre. Pour repartir de zéro, « Tout remettre par
@@ -150,23 +151,48 @@ répétition à l'identique que l'oreille repère, pas le son. Sans cette variat
 > ZWrite, mot-clé et file de rendu se règlent à la main dans
 > `SceneBuilder.CreateParticleMaterial`.
 
+## Les blobs : trois gelées au choix
+
+Trois planches de sprites, une par style, générées par code comme le reste de l'art.
+Chacune fait **9 colonnes × 2 lignes** : la colonne est l'état de déformation, du plus
+aplati au plus étiré, la ligne est le joueur — vert en haut, orange en bas.
+
+| Style | Profil |
+|---|---|
+| **Rond** | Dôme ferme, déformation quasi uniforme |
+| **Mou** | Les flancs gonflent à l'écrasement et se creusent à l'étirement, reflet mouillé |
+| **Anguleux** | Dix facettes planes, une valeur par face — une gelée moulée |
+
+Les images ne sont pas des mises à l'échelle : chacune est redessinée depuis un profil
+radial propre au style. Un `localScale` ne saurait faire gonfler un flanc ni aplatir
+une facette.
+
+Le retour au repos passe par un **ressort amorti**, pas par une interpolation linéaire :
+le blob dépasse le repos puis oscille une ou deux fois. C'est ce dépassement qui fait
+lire la gelée. `Squash Stiffness` et `Squash Damping` sur les blobs règlent la fermeté
+et la durée du ballottement.
+
+Le style se change dans les options, en cours de partie, et se garde d'une fois sur
+l'autre.
+
 ## Structure
 
 ```
 Assets/
-├── Art/                 Sprites générés par code + matériaux physiques
+├── Art/                 Sprites et planches générés par code + matériaux physiques
 ├── Audio/Kenney/        Effets CC0 + licence et provenance
 ├── Audio/Music/         Musique CC0 + licence et provenance
 ├── Settings/            Pipeline URP, Renderer 2D, volume profile par défaut
 ├── Editor/              → assembly SmilyVolley.Editor (exclue du build)
-│   ├── PlaceholderArt.cs      Dessine les PNG (blobs, balle, filet, ciel, ombre)
+│   ├── PlaceholderArt.cs      Dessine les PNG (balle, filet, ciel, ombre, particule)
+│   ├── BlobSheetArt.cs        Dessine les trois planches de blobs
 │   ├── SceneBuilder.cs        Assemble toute la scène de jeu
 │   ├── RenderPipelineSetup.cs Active URP sur tous les niveaux de qualité
 │   └── BuildTools.cs          Build Windows + réglages projet
 ├── Scenes/Game.unity
 └── Scripts/             → assembly SmilyVolley
-    ├── Core/            GameManager, GameSettings, CameraFitter, Side
-    ├── Gameplay/        BlobController, BallController, IA, entrées, ombre, particules
+    ├── Core/            GameManager, GameSettings, BlobStyle, CameraFitter, Side
+    ├── Gameplay/        BlobController, BlobAnimator, BallController, IA, entrées, particules
     ├── Audio/           GameAudio
     └── UI/              HudController, MenuController, MenuRow
 docs/
@@ -182,6 +208,8 @@ la recompilation du jeu.
 - **Construire la scène de jeu** — régénère `Game.unity` de zéro (toute modification manuelle
   de la scène est perdue). Les dimensions du terrain sont les constantes en tête de `SceneBuilder`.
 - **Régénérer les sprites** — redessine les PNG de `Assets/Art`.
+- **Régénérer les planches de blobs** — redessine les trois planches et les redécoupe
+  en sprites.
 - **Compiler le build Windows** — produit `Build/Windows/SmilyVolley.exe`.
 - **Activer le pipeline URP** — réassigne `Assets/Settings/UniversalRP.asset` sur tous les
   niveaux de qualité. Unity range le pipeline actif dans `QualitySettings` niveau par niveau :
@@ -253,7 +281,7 @@ Le jeu est léger, mais le code évite les schémas qui coûtent cher dès qu'un
 
 - Menu principal, sélection de mode et écran d'options
 - Effet de rotation sur la balle influençant la trajectoire
-- Sprites définitifs en remplacement des PNG générés
+- Sprites définitifs en remplacement des planches générées, et animation de repos
 - Difficultés d'IA nommées, mode tournoi
 
 La feuille de route complète et les risques identifiés sont dans [docs/GDD.md](docs/GDD.md).

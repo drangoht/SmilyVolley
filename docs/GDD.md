@@ -447,6 +447,7 @@ d'événements de l'UI : deux façons de lire les touches auraient fini par dive
 | **Adversaire** | Ordinateur ou humain ; difficulté sur cinq crans nommés, de Tranquille à Implacable |
 | **Règles** | Points pour gagner (5 à 21), écart de deux points, touches par camp, comptage, camp qui engage |
 | **Son** | Musique et effets, par pas de 5 % |
+| **Apparence** | Style des blobs : Rond, Mou ou Anguleux |
 | **Affichage** | Plein écran |
 
 Tout est conservé d'une partie à l'autre dans les PlayerPrefs, sous le préfixe
@@ -478,9 +479,57 @@ Toute la lisibilité repose sur le contraste de teinte entre les deux camps.
 Les visages — deux yeux, un sourire — n'ont aucune fonction mécanique. Ils donnent au
 jeu son nom et sa bonne humeur.
 
-**État actuel** : tous les sprites sont **générés par code** (`PlaceholderArt`), sans
-aucun asset externe. Le projet se clone et se lance sans dépendance. Ils sont pensés
-pour être remplacés : il suffit d'écraser les PNG de `Assets/Art`.
+**État actuel** : tous les sprites sont **générés par code** (`PlaceholderArt` et
+`BlobSheetArt`), sans aucun asset externe. Le projet se clone et se lance sans
+dépendance. Ils sont pensés pour être remplacés : il suffit d'écraser les PNG de
+`Assets/Art`.
+
+### 10.1 Les blobs : trois gelées au choix
+
+Trois planches de sprites, une par style, chacune de **9 colonnes × 2 lignes** : la
+colonne est l'état de déformation, du plus aplati au plus étiré ; la ligne est le
+joueur, vert en haut, orange en bas. Une planche par style tient en un fichier — c'est
+ce qui permet de les comparer d'un coup d'œil.
+
+| Style | Profil | Ce qu'il évoque |
+|---|---|---|
+| **Rond** | Dôme ferme, déformation quasi uniforme | La gelée d'origine, la plus sobre |
+| **Mou** | Les flancs gonflent à l'écrasement, se creusent à l'étirement ; reflet mouillé | Une gelée liquide, presque une goutte |
+| **Anguleux** | Dix facettes planes, une valeur de gris par face | Une gelée moulée, ferme et taillée |
+
+**Les images ne sont pas des mises à l'échelle.** Chacune est redessinée à partir d'un
+profil radial propre au style : `BoundaryRadius(angle, écrasement, style)` donne le
+rayon du contour, et c'est cette fonction — elle seule — qui distingue les trois. Un
+simple `localScale` ne saurait faire gonfler un flanc ni aplatir une facette.
+
+Le visage est dessiné dans l'espace du dôme unité, avant la transformation
+d'écrasement : il se déforme donc avec le corps, sans une ligne de code de plus.
+
+### 10.2 Le ballottement
+
+La déformation ne revient plus au repos en ligne droite mais par un **ressort amorti** :
+
+```
+accélération = (1 − écrasement) × raideur − vitesse × amortissement
+```
+
+Avec une raideur de 180 et un amortissement de 14, le rapport d'amortissement vaut
+0,52 : le blob **dépasse le repos** puis oscille une ou deux fois avant de se poser.
+C'est ce dépassement qui fait lire la gelée — un retour linéaire ne donne que du
+caoutchouc. Mesuré à l'atterrissage, en pixels à l'écran :
+
+| Moment | Largeur × hauteur |
+|---|---|
+| Repos | 139 × 70 |
+| Impact | 177 × 55 — étalé et aplati |
+| Remontée | 167 × 59, puis 153 × 65, puis 143 × 69 |
+| **Dépassement** | **136 × 72 — plus étroit et plus haut qu'au repos** |
+| Retour | 139 × 71, puis 139 × 70 |
+
+Neuf images pour couvrir un écrasement de 0,72 à 1,28, soit un pas de 7 % : assez
+grossier pour se voir. `BlobAnimator` choisit l'image la plus proche puis applique le
+**résidu** en échelle — 3,5 % au pire, invisible comme distorsion. L'image donne la
+forme, le résidu donne la quantité exacte.
 
 **Éclairage** : le Renderer 2D d'URP applique aux sprites le matériau `Sprite-Lit-Default`.
 Sans lumière dans la scène, tous les sprites seraient rendus **noirs**. Une `Light2D`
@@ -573,9 +622,11 @@ SmilyVolley (assembly runtime)
 ├── Core/
 │   ├── GameManager      Machine à états du match, score, service, règles
 │   ├── CameraFitter     Cadrage adaptatif au format d'écran
+│   ├── BlobStyle        Les trois interprétations graphiques
 │   ├── GameSettings     Réglages du joueur et leur persistance
 │   └── Side             Camp du terrain (la valeur enum est le signe sur X)
 ├── Gameplay/
+│   ├── BlobAnimator     Choix de l'image selon la déformation
 │   ├── BlobController   Déplacement manuel, saut, butées, écrasement
 │   ├── BlobInput        Abstraction des commandes (clavier ou IA)
 │   ├── HumanBlobInput   Clavier via Input System
@@ -594,6 +645,7 @@ SmilyVolley (assembly runtime)
 
 SmilyVolley.Editor (assembly éditeur, exclu du build)
 ├── SceneBuilder         Assemble la scène complète
+├── BlobSheetArt         Dessine les trois planches de blobs
 ├── PlaceholderArt       Dessine les PNG
 ├── RenderPipelineSetup  Active URP sur tous les niveaux de qualité
 └── BuildTools           Build Windows et réglages projet
@@ -649,6 +701,7 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 | `Ball` | `Min Vertical Angle` | Écart minimal du renvoi avec la verticale ; 0 = échanges bloquables |
 | `Ball` *(Rigidbody2D)* | `Gravity Scale` | Balle flottante ou lourde |
 | `BlobLeft` / `BlobRight` | `Move Speed`, `Jump Speed`, `Gravity` | Sensation de déplacement |
+| `BlobLeft` / `BlobRight` | `Squash Stiffness`, `Squash Damping` | Fermeté et durée du ballottement |
 | `BlobRight` *(AiBlobInput)* | `Aim Offset`, `Jump Reach` | Style de jeu de l'IA |
 | `Audio` *(GameAudio)* | Volumes par événement | Équilibre du mixage |
 | `Audio` *(GameAudio)* | `Pitch Jitter` | Variation de hauteur ; 0 = répétition mécanique |
@@ -677,7 +730,9 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 - **Effet sur la balle** : la vitesse tangentielle du blob induirait une rotation qui
   courberait la trajectoire. C'est l'ajout le plus riche possible sans nouvelle touche.
 - **Écran de fin de match** avec statistiques : plus long échange, smashs réussis.
-- **Sprites définitifs** en remplacement des PNG générés, et animations d'idle.
+- **Sprites définitifs** en remplacement des planches générées, et animation de repos
+  (respiration) qui manque encore : la gelée ne bouge aujourd'hui que sous l'effet des
+  sauts et des impacts.
 
 ### Long terme — s'il y a une suite
 

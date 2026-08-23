@@ -78,6 +78,8 @@ namespace SmilyVolley
         static readonly string[] DifficultyNames =
             { "Tranquille", "Facile", "Normale", "Redoutable", "Implacable" };
         static readonly int[] PointOptions = { 5, 7, 11, 15, 21 };
+        // Dans l'ordre de l'énumération BlobStyle.
+        static readonly string[] BlobStyleNames = { "Rond", "Mou", "Anguleux" };
 
         readonly List<Entry> entries = new List<Entry>(32);
         readonly GameSettings settings = new GameSettings();
@@ -408,6 +410,12 @@ namespace SmilyVolley
             entries.Add(Value("Effets",
                 () => Percent(settings.sfxVolume),
                 d => settings.sfxVolume = Step(settings.sfxVolume, d)));
+
+            entries.Add(Header("Apparence"));
+            entries.Add(Value("Style des blobs",
+                () => BlobStyleNames[(int)settings.blobStyle],
+                d => settings.blobStyle = (BlobStyle)Mathf.Clamp(
+                    (int)settings.blobStyle + d, 0, BlobStyleNames.Length - 1)));
 
             entries.Add(Header("Affichage"));
             entries.Add(Value("Plein écran",

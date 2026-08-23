@@ -39,6 +39,9 @@ namespace SmilyVolley
         [Range(0f, 1f)] public float musicVolume = 0.25f;
         [Range(0f, 1f)] public float sfxVolume = 1f;
 
+        // ----- apparence -----
+        public BlobStyle blobStyle = BlobStyle.Round;
+
         // ----- affichage -----
         public bool fullscreen = false;
 
@@ -60,6 +63,7 @@ namespace SmilyVolley
 
             musicVolume = defaults.musicVolume;
             sfxVolume = defaults.sfxVolume;
+            blobStyle = defaults.blobStyle;
             fullscreen = defaults.fullscreen;
         }
 
@@ -95,6 +99,10 @@ namespace SmilyVolley
 
             musicVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(Prefix + "musicVolume", musicVolume));
             sfxVolume = Mathf.Clamp01(PlayerPrefs.GetFloat(Prefix + "sfxVolume", sfxVolume));
+
+            int style = PlayerPrefs.GetInt(Prefix + "blobStyle", (int)blobStyle);
+            if (System.Enum.IsDefined(typeof(BlobStyle), style)) blobStyle = (BlobStyle)style;
+
             fullscreen = LoadBool("fullscreen", fullscreen);
         }
 
@@ -115,6 +123,7 @@ namespace SmilyVolley
 
             PlayerPrefs.SetFloat(Prefix + "musicVolume", musicVolume);
             PlayerPrefs.SetFloat(Prefix + "sfxVolume", sfxVolume);
+            PlayerPrefs.SetInt(Prefix + "blobStyle", (int)blobStyle);
             SaveBool("fullscreen", fullscreen);
 
             PlayerPrefs.Save();
@@ -140,6 +149,8 @@ namespace SmilyVolley
         {
             ApplyControls(leftBlob, p1Left, p1Right, p1Jump);
             ApplyControls(rightBlob, p2Left, p2Right, p2Jump);
+            ApplyStyle(leftBlob);
+            ApplyStyle(rightBlob);
 
             if (manager != null)
             {
@@ -162,6 +173,14 @@ namespace SmilyVolley
             // Screen.fullScreen relance le mode d'affichage à chaque affectation, même
             // identique : on ne touche à rien tant que le réglage n'a pas changé.
             if (Screen.fullScreen != fullscreen) Screen.fullScreen = fullscreen;
+        }
+
+        void ApplyStyle(BlobController blob)
+        {
+            if (blob == null) return;
+
+            var animator = blob.GetComponent<BlobAnimator>();
+            if (animator != null) animator.SetStyle(blobStyle);
         }
 
         static void ApplyControls(BlobController blob, Key left, Key right, Key jump)

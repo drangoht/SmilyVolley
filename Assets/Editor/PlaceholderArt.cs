@@ -14,8 +14,9 @@ namespace SmilyVolley.EditorTools
         public const string ArtFolder = "Assets/Art";
         public const float PixelsPerUnit = 200f;
 
-        static readonly Color LeftBody = new Color(0.24f, 0.72f, 0.42f);
-        static readonly Color RightBody = new Color(0.93f, 0.44f, 0.31f);
+        // Publiques : les planches de blobs (BlobSheetArt) reprennent exactement ces teintes.
+        public static readonly Color LeftBody = new Color(0.24f, 0.72f, 0.42f);
+        public static readonly Color RightBody = new Color(0.93f, 0.44f, 0.31f);
         static readonly Color BallA = new Color(0.98f, 0.85f, 0.30f);
         static readonly Color BallB = new Color(0.99f, 0.99f, 0.97f);
 

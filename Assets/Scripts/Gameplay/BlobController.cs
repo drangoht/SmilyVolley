@@ -37,7 +37,17 @@ namespace SmilyVolley
         [Header("Rendu")]
         [Tooltip("Transform du sprite, utilisé pour l'effet d'écrasement à l'atterrissage.")]
         public Transform visual;
-        public float squashRecoverySpeed = 5f;
+        [Tooltip("Décoché quand un BlobAnimator prend la main : c'est alors lui qui porte la déformation.")]
+        public bool useProceduralSquash = true;
+        [Tooltip("Raideur du retour au repos. Plus c'est haut, plus la gelée est ferme.")]
+        public float squashStiffness = 180f;
+        [Tooltip("Amortissement. Bas = la gelée ballotte longtemps, haut = elle se fige aussitôt.")]
+        public float squashDamping = 14f;
+
+        // Bornes de la déformation. Elles correspondent aux images extrêmes des planches :
+        // sortir de cet intervalle demanderait une image qui n'existe pas.
+        public const float MinSquash = 0.72f;
+        public const float MaxSquash = 1.28f;
 
         // Tampon partagé : GetComponents<T>() alloue un tableau à chaque appel, la surcharge
         // à liste réutilise le même buffer. Le changement de mode passe par ici.
@@ -50,6 +60,7 @@ namespace SmilyVolley
         Vector2 startPosition;
         bool grounded = true;
         float squash = 1f;
+        float squashVelocity;
         float appliedSquash = float.NaN;
 
         /// <summary>Centre du cercle de collision : c'est le point de référence des rebonds de balle.</summary>
@@ -57,6 +68,12 @@ namespace SmilyVolley
 
         public Vector2 Velocity => velocity;
         public bool Grounded => grounded;
+
+        /// <summary>
+        /// Déformation courante : 1 au repos, moins d'un écrasé, plus d'un étiré.
+        /// C'est ce que lit le <c>BlobAnimator</c> pour choisir son image.
+        /// </summary>
+        public float Squash => squash;
 
         /// <summary>
         /// Position de départ du blob, celle qu'il retrouve à chaque service. C'est au-dessus
@@ -105,6 +122,7 @@ namespace SmilyVolley
             velocity = Vector2.zero;
             grounded = true;
             squash = 1f;
+            squashVelocity = 0f;
             cachedTransform.position = startPosition;
             if (body != null) body.position = startPosition;
             if (input != null) input.OnServeStart();
@@ -153,9 +171,17 @@ namespace SmilyVolley
 
         void Update()
         {
-            if (visual == null) return;
+            float dt = Time.deltaTime;
+            if (dt <= 0f) return;
 
-            squash = Mathf.MoveTowards(squash, 1f, squashRecoverySpeed * Time.deltaTime);
+            // Ressort amorti plutôt qu'un retour linéaire : c'est le dépassement au-delà
+            // du repos, puis l'oscillation qui s'éteint, qui font lire la gelée. Un
+            // MoveTowards s'arrête net à 1 et ne donne qu'un caoutchouc.
+            float acceleration = (1f - squash) * squashStiffness - squashVelocity * squashDamping;
+            squashVelocity += acceleration * dt;
+            squash = Mathf.Clamp(squash + squashVelocity * dt, MinSquash, MaxSquash);
+
+            if (!useProceduralSquash || visual == null) return;
 
             // Le blob passe l'essentiel du match sans écrasement : réécrire la même échelle
             // à chaque image marquerait le Transform sale pour rien.

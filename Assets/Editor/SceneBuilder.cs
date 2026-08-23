@@ -55,6 +55,7 @@ namespace SmilyVolley.EditorTools
         public static void Build()
         {
             PlaceholderArt.GenerateAll();
+            BlobSheetArt.GenerateAll();
             ConfigureAudioImport();
 
             var bouncyWall = CreateMaterial("Bouncy", 0.92f);
@@ -289,6 +290,8 @@ namespace SmilyVolley.EditorTools
             blob.radius = BlobRadius;
             blob.visual = visual.transform;
 
+            AttachBlobAnimator(blob, visual.GetComponent<SpriteRenderer>(), side);
+
             // Chaque blob est confiné à son camp : mur latéral d'un côté, filet de l'autre.
             float inner = NetHalfWidth + BlobRadius;
             float outer = WallX - BlobRadius;
@@ -318,6 +321,65 @@ namespace SmilyVolley.EditorTools
             }
 
             return blob;
+        }
+
+        /// <summary>
+        /// Branche les trois planches sur le blob. Le composant remplace l'écrasement
+        /// procédural du <see cref="BlobController"/> : les deux ensemble déformeraient
+        /// le blob deux fois.
+        /// </summary>
+        static void AttachBlobAnimator(BlobController blob, SpriteRenderer renderer, Side side)
+        {
+            var animator = blob.gameObject.AddComponent<BlobAnimator>();
+            animator.blob = blob;
+            animator.target = renderer;
+            animator.minSquash = BlobSheetArt.MinSquash;
+            animator.maxSquash = BlobSheetArt.MaxSquash;
+
+            var all = (BlobStyle[])System.Enum.GetValues(typeof(BlobStyle));
+            animator.styles = new BlobAnimator.StyleFrames[all.Length];
+
+            for (int i = 0; i < all.Length; i++)
+            {
+                animator.styles[i] = new BlobAnimator.StyleFrames
+                {
+                    style = all[i],
+                    frames = LoadBlobFrames(all[i], side),
+                };
+            }
+
+            blob.useProceduralSquash = false;
+
+            // Image de repos du style par défaut : sans elle la scène s'ouvrirait sur un
+            // blob vide, le temps que le premier LateUpdate choisisse une image.
+            Sprite[] round = animator.styles[0].frames;
+            if (round != null && round.Length > BlobSheetArt.FrameCount / 2)
+            {
+                renderer.sprite = round[BlobSheetArt.FrameCount / 2];
+            }
+        }
+
+        static Sprite[] LoadBlobFrames(BlobStyle style, Side side)
+        {
+            string path = BlobSheetArt.AssetPath(style);
+            var frames = new Sprite[BlobSheetArt.FrameCount];
+
+            foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(path))
+            {
+                if (asset is not Sprite sprite) continue;
+
+                for (int i = 0; i < frames.Length; i++)
+                {
+                    if (sprite.name == BlobSheetArt.SpriteName(style, side, i)) frames[i] = sprite;
+                }
+            }
+
+            for (int i = 0; i < frames.Length; i++)
+            {
+                if (frames[i] == null) Debug.LogError($"Image manquante : {BlobSheetArt.SpriteName(style, side, i)} dans {path}");
+            }
+
+            return frames;
         }
 
         static AiBlobInput ConfigureAi(BlobController blob, BallController ball)
