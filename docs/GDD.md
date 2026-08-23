@@ -50,8 +50,9 @@ Toute la profondeur vient de **où** la balle touche le blob, pas d'un arsenal d
 C'est la mécanique centrale, et c'est le seul endroit où le jeu s'écarte de la physique.
 
 Quand la balle touche un blob, elle **ne rebondit pas** : elle est relancée
-**radialement depuis le centre du blob, à vitesse constante**. La direction de départ
-est donc uniquement le vecteur centre-du-blob → balle.
+**radialement depuis le centre du blob**. La direction de départ est donc uniquement le
+vecteur centre-du-blob → balle. **Le placement donne la direction, l'élan donne la
+vitesse** — voir 2.2.
 
 ```
         ↑                        ↖         ↑         ↗
@@ -73,15 +74,17 @@ Viser, c'est donc **se placer**. Le joueur ne choisit jamais une direction de ti
 choisit un point de contact. Un débutant renvoie ; un joueur habitué décale son blob
 de quelques dizaines de centimètres et place la balle.
 
-Une part de la vitesse du blob est ajoutée au renvoi (32 %), ce qui récompense le
-mouvement au moment de l'impact sans jamais dominer la composante radiale.
+Une part de la vitesse du blob infléchit la direction du renvoi (32 %), ce qui
+récompense le mouvement au moment de l'impact sans jamais dominer la composante radiale.
 
 #### L'angle minimal de renvoi
 
-La vitesse de renvoi étant **imposée** et non conservée, rien ne s'amortit d'une frappe
-à l'autre. Le renvoi radial possède donc un point fixe : une balle qui retombe
-exactement sur le sommet d'un blob immobile repart exactement à la verticale, retombe
-au même endroit, et repart à l'identique — indéfiniment.
+La vitesse de renvoi **converge vers le plancher** au lieu de se conserver : deux
+frappes sans élan suffisent à ramener n'importe quelle balle à 12 u/s. Le renvoi radial
+possède donc un point fixe : une balle qui retombe exactement sur le sommet d'un blob
+immobile repart exactement à la verticale, retombe au même endroit, et repart à
+l'identique — indéfiniment. L'accélération n'y change rien : elle ne fait que retarder
+l'arrivée au point fixe, elle ne l'empêche pas.
 
 Ce n'était pas un cas limite théorique : le service posait la balle pile au-dessus du
 blob, l'égalité était donc exacte, et un joueur qui ne touchait à rien voyait la balle
@@ -99,7 +102,58 @@ que sur une frappe rigoureusement centrée. À 12°, la composante verticale vau
 98 % de la vitesse de renvoi : les chandelles restent hautes. Le smash n'est jamais
 concerné, puisqu'il renvoie la balle vers le bas.
 
-### 2.2 Le contrôle sec
+### 2.2 L'accélération : smash et balle rapide
+
+Longtemps la balle repartait **toujours** à 12 u/s. Le tableau ci-dessus promettait un
+smash, mais ce smash n'était qu'une direction : la balle allait vers le bas, à la même
+vitesse qu'une chandelle. Mesuré sur le jeu compilé, la vitesse n'a jamais dépassé
+**13,1 u/s** sur trois échanges — les 1,1 u/s d'écart venant du seul apport directionnel.
+
+La vitesse de renvoi se compose désormais de trois termes :
+
+| Terme | Valeur | Ce qu'il apporte |
+|---|---|---|
+| **Plancher** | 12 u/s | Une reprise sans élan repart toujours à cette vitesse : un échange calme le reste |
+| **Élan du blob** | vitesse du blob projetée sur l'axe de renvoi, × 1 | Un blob qui retombe à 9 u/s sur la balle la renvoie 9 u/s plus vite : **c'est le smash** |
+| **Report** | 50 % de ce que la balle avait au-dessus du plancher | Une balle rapide le reste un échange ou deux, puis se calme d'elle-même |
+
+Le report est **inférieur à 1**, et c'est ce qui garantit la convergence : une balle
+frappée sans élan perd la moitié de son excès à chaque frappe et revient au plancher en
+trois échanges. Rendre l'intégralité de l'élan reçu ferait diverger la partie.
+
+L'élan compté est celui du blob **le long de l'axe de renvoi**, jamais sa vitesse brute.
+Un blob qui court perpendiculairement à la balle n'accélère rien ; il faut aller *dans*
+la balle. C'est ce qui garde la mécanique lisible : le joueur ne presse pas un bouton de
+frappe forte, il se jette dedans.
+
+#### Le plafond de montée
+
+Premier essai, sans garde-fou : un blob qui saute sous la balle lui met ses 9,7 u/s
+d'impulsion dans la verticale, et la balle **quittait le cadre par le haut** — mesurée à
+25 px du bord supérieur de l'écran, contre 211 px avant le chantier.
+
+La montée est donc écrêtée à 13,5 u/s, ce qui plafonne l'ascension à environ 6 unités.
+Ce plafond ne touche **ni le smash**, qui va vers le bas, **ni le renvoi rasant**, qui va
+sur le côté : il n'aplatit que les chandelles-fusées. La balle culmine désormais à une
+unité sous le haut du cadre.
+
+#### Ce que ça change, mesuré
+
+Trois échanges capturés sur chaque build, vitesse de la balle relevée image par image :
+
+| | Avant | Après |
+|---|---|---|
+| Médiane en vol | 5,3 u/s | 11,0 u/s |
+| 90ᵉ centile | 9,7 u/s | 15,6 u/s |
+| Maximum | 13,1 u/s | 19,1 u/s |
+| Temps de vol au-dessus de 15 u/s | 0 % | 13,5 % |
+
+**Le son et les particules suivent.** Un smash ne peut pas sonner comme une reprise
+molle : la hauteur du son monte de 6 % à la frappe la plus dure, le volume de 22 %, et la
+bouffée de particules triple. C'est le timbre, plus que le niveau, qui dit la force d'un
+choc.
+
+### 2.3 Le contrôle sec
 
 Les blobs sont des `Rigidbody2D` **kinematic** dont la gravité, le saut et les butées
 sont calculés à la main. Ils ne sont jamais poussés par la balle, ne glissent pas et
@@ -109,7 +163,7 @@ l'image**.
 C'est un choix de sensation, pas de facilité technique : un blob à physique dynamique
 serait bousculé par chaque impact et le joueur perdrait la maîtrise de son placement.
 
-### 2.3 Le terrain sans temps mort
+### 2.4 Le terrain sans temps mort
 
 Toute seconde où la balle est hors de vue est une seconde perdue.
 
@@ -312,9 +366,12 @@ le blob retombe avant elle, ce qui rend le smash atteignable.
 
 | Paramètre | Valeur | Effet ressenti |
 |---|---|---|
-| Vitesse de renvoi | 12 u/s | Constante : la puissance ne dépend pas de l'impact |
-| Influence de la vitesse du blob | 32 % | Récompense le mouvement sans écraser le placement |
-| Vitesse maximale | 20 u/s | Plafond de sécurité, la balle reste suivable à l'œil |
+| Vitesse de renvoi plancher | 12 u/s | Une reprise sans élan : la puissance vient du joueur, pas du hasard |
+| Élan du blob rendu | × 1 | Le smash et la balle rapide (§ 2.2) |
+| Report de l'excès de vitesse | 50 % | Une balle rapide le reste un échange ou deux |
+| Influence de la vitesse du blob | 32 % | Infléchit la direction, pas la vitesse |
+| Vitesse maximale | 24 u/s | Plafond de sécurité, la balle reste suivable à l'œil |
+| Montée maximale à la frappe | 13,5 u/s | La balle ne quitte jamais le cadre par le haut (§ 2.2) |
 | Échelle de gravité | 1,5 (≈ 14,7 u/s²) | Trajectoires tendues, peu de flottement |
 | Rebond (murs, filet, sol) | 0,92 | Presque élastique : les échanges ne s'éteignent pas |
 | Délai de re-frappe | 0,05 s | Évite que la balle se colle à un blob qui monte |
@@ -761,7 +818,10 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 | `GameManager` | `Serve Goes To Loser` | Décoché : le gagnant du point engage |
 | `GameManager` | `Serve Delay`, `Point Pause` | Rythme entre les échanges |
 | `GameManager` | `Serve Offset X` | Décalage de la balle vers le filet au service ; 0 = pile au-dessus du blob |
-| `Ball` | `Hit Speed`, `Blob Velocity Influence` | Nervosité des échanges |
+| `Ball` | `Hit Speed` | Vitesse plancher d'un échange calme |
+| `Ball` | `Blob Drive`, `Speed Carry` | Puissance du smash, durée de vie d'une balle rapide |
+| `Ball` | `Blob Velocity Influence` | Part du déplacement du blob dans la direction du renvoi |
+| `Ball` | `Max Climb Speed` | Hauteur des chandelles ; trop haut, la balle sort du cadre |
 | `Ball` | `Min Vertical Angle` | Écart minimal du renvoi avec la verticale ; 0 = échanges bloquables |
 | `Ball` *(Rigidbody2D)* | `Gravity Scale` | Balle flottante ou lourde |
 | `BlobLeft` / `BlobRight` | `Move Speed`, `Jump Speed`, `Gravity` | Sensation de déplacement |

@@ -7,18 +7,40 @@ namespace SmilyVolley
     /// <summary>
     /// Balle du jeu. Les rebonds sur les murs, le filet et le sol sont laissés à la physique 2D ;
     /// en revanche la frappe sur un blob est calculée à la main : la balle repart radialement
-    /// depuis le centre du blob à vitesse constante. C'est ce qui permet de viser en frappant
-    /// avec le côté du blob, et de smasher en le percutant par le dessus.
+    /// depuis le centre du blob. C'est ce qui permet de viser en frappant avec le côté du
+    /// blob, et de smasher en le percutant par le dessus.
+    ///
+    /// Le placement donne la direction, l'élan donne la vitesse. Un blob immobile renvoie
+    /// toujours à la même vitesse plancher ; un blob qui se jette dans la balle lui ajoute
+    /// son propre élan, et c'est de là que viennent le smash et la balle rapide.
     /// </summary>
     [RequireComponent(typeof(Rigidbody2D))]
     [RequireComponent(typeof(CircleCollider2D))]
     public class BallController : MonoBehaviour
     {
         [Header("Frappe")]
+        [Tooltip("Vitesse de renvoi d'une frappe sans élan. C'est le plancher de tout échange : " +
+                 "une balle mollement reprise repart toujours à cette vitesse-là.")]
         public float hitSpeed = 12f;
-        [Tooltip("Part de la vitesse du blob transmise à la balle.")]
+
+        [Tooltip("Élan du blob le long de l'axe de renvoi, ajouté à la vitesse. À 1, un blob " +
+                 "qui retombe à 9 u/s sur la balle la renvoie 9 u/s plus vite : c'est le smash.")]
+        public float blobDrive = 1f;
+
+        [Tooltip("Part de l'excès de vitesse que la balle garde d'une frappe à l'autre. " +
+                 "En dessous de 1, une balle rapide se calme d'elle-même en quelques échanges.")]
+        [Range(0f, 0.95f)] public float speedCarry = 0.5f;
+
+        [Tooltip("Part de la vitesse du blob transmise à la direction du renvoi. " +
+                 "Ne joue que sur l'orientation : la vitesse, elle, vient de Blob Drive.")]
         public float blobVelocityInfluence = 0.32f;
-        public float maxSpeed = 20f;
+
+        public float maxSpeed = 24f;
+
+        [Tooltip("Vitesse de montée maximale au sortir d'une frappe. Une balle plus rapide " +
+                 "monte plus haut : au-delà, elle quitte le cadre et le joueur la perd de vue. " +
+                 "Ne plafonne que la montée — un smash et un renvoi rasant gardent tout leur élan.")]
+        public float maxClimbSpeed = 13.5f;
         [Tooltip("Délai avant de pouvoir ré-appliquer une frappe pendant un contact continu.")]
         public float stickyRehitDelay = 0.05f;
         [Tooltip("Angle minimal entre le renvoi et la verticale, en degrés. À zéro, une balle " +
@@ -69,6 +91,12 @@ namespace SmilyVolley
 
         public Rigidbody2D Body => body;
         public Vector2 Velocity => body != null ? body.linearVelocity : Vector2.zero;
+
+        /// <summary>
+        /// Vitesse courante. Lue juste après <see cref="BlobHit"/>, elle donne la force du
+        /// renvoi : c'est ce qui dose le son et la bouffée de particules de la frappe.
+        /// </summary>
+        public float Speed => body != null ? body.linearVelocity.magnitude : 0f;
         public bool InPlay => body != null && body.simulated;
 
         void Awake()
@@ -216,8 +244,29 @@ namespace SmilyVolley
 
             direction = TiltAwayFromVertical(direction, blob);
 
-            Vector2 velocity = direction * hitSpeed + blob.Velocity * blobVelocityInfluence;
-            body.linearVelocity = Vector2.ClampMagnitude(velocity, maxSpeed);
+            // Direction : le radial, infléchi par le déplacement du blob. C'est le placement
+            // qui vise, et le mouvement ne fait qu'accompagner.
+            Vector2 aim = direction * hitSpeed + blob.Velocity * blobVelocityInfluence;
+            Vector2 heading = aim.sqrMagnitude > 1e-6f ? aim.normalized : direction;
+
+            // Vitesse : le plancher, plus l'élan que le blob met dans l'axe du renvoi, plus
+            // ce que la balle avait déjà de trop. Le blob qui retombe sur une balle basse
+            // signe le smash ; celui qui monte sous une balle haute signe la chandelle tendue.
+            float drive = Mathf.Max(0f, Vector2.Dot(blob.Velocity, contact));
+
+            // L'excès ne survit qu'en partie : sans cet amortissement, chaque frappe
+            // rendrait ce qu'elle a reçu et la balle ne redescendrait jamais au calme.
+            float carried = Mathf.Max(0f, incoming - hitSpeed) * speedCarry;
+
+            Vector2 launched = heading * Mathf.Min(hitSpeed + drive * blobDrive + carried, maxSpeed);
+
+            // Un blob qui saute sous la balle lui met tout son élan dans la verticale, et la
+            // balle sort du cadre par le haut : mesuré, elle touchait le plafond de l'écran.
+            // Écrêter la seule montée aplatit ces chandelles-fusées sans rien retirer au
+            // smash, qui va vers le bas, ni au renvoi rasant, qui va sur le côté.
+            if (launched.y > maxClimbSpeed) launched.y = maxClimbSpeed;
+
+            body.linearVelocity = launched;
 
             blob.ReportBallImpact(contact, incoming);
 

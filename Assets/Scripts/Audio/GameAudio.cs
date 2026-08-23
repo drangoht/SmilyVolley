@@ -174,7 +174,24 @@ namespace SmilyVolley
 
         // ------------------------------------------------------------------ réactions
 
-        void OnBlobHit(BlobController blob) => Play(blobHitClips, blobHitVolume);
+        /// <summary>
+        /// Frappe sur un blob. La vitesse de renvoi n'est plus constante : un smash doit
+        /// s'entendre comme un smash. Le volume monte peu, la hauteur beaucoup — c'est le
+        /// timbre, pas le niveau, qui dit la force d'un choc.
+        /// </summary>
+        void OnBlobHit(BlobController blob)
+        {
+            float force = HitForce();
+            Play(blobHitClips, blobHitVolume * Mathf.Lerp(0.78f, 1f, force),
+                Mathf.Lerp(0.94f, 1.14f, force));
+        }
+
+        /// <summary>Force du renvoi qui vient d'être calculé : 0 au plancher, 1 à la vitesse maximale.</summary>
+        float HitForce()
+        {
+            if (ball == null || ball.maxSpeed <= ball.hitSpeed) return 0f;
+            return Mathf.InverseLerp(ball.hitSpeed, ball.maxSpeed, ball.Speed);
+        }
 
         void OnBallLanded(Vector2 position) => Play(ballLandClips, ballLandVolume);
 

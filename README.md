@@ -94,14 +94,42 @@ Le contrôle « sec » de Blobby Volley vient de deux choix :
 - Les blobs sont des `Rigidbody2D` **kinematic** dont la gravité et le saut sont calculés
   à la main (`BlobController`). La balle ne les pousse jamais.
 - La frappe n'est pas un rebond physique : la balle repart **radialement depuis le centre
-  du blob** à vitesse constante (`BallController.ApplyBlobHit`). Frapper avec le côté du
-  blob permet de viser, le percuter par au-dessus permet de smasher.
+  du blob** (`BallController.ApplyBlobHit`). Frapper avec le côté du blob permet de viser,
+  le percuter par au-dessus permet de smasher.
 
 Les rebonds sur les murs, le filet et le sol restent gérés par la physique 2D
 (`Assets/Art/Bouncy.physicsMaterial2D` et `Sand.physicsMaterial2D`).
 
-> **Pourquoi un angle minimal de renvoi.** La vitesse de renvoi est imposée, pas
-> conservée : rien ne s'amortit d'une frappe à l'autre. Une balle qui retombe pile sur le
+### Le placement donne la direction, l'élan donne la vitesse
+
+La balle ne repart plus toujours à la même vitesse. Le renvoi vaut :
+
+```
+plancher 12 u/s   +   élan du blob sur l'axe de renvoi   +   50 % de l'excès reçu
+```
+
+- Un blob **immobile** renvoie au plancher : un échange calme le reste.
+- Un blob qui **retombe sur la balle** lui ajoute ses 9 u/s de chute — c'est le smash.
+- Une **balle rapide** garde la moitié de son excès à chaque frappe, et revient donc au
+  plancher en trois échanges si personne ne la relance. C'est ce report inférieur à 1 qui
+  garantit que la partie ne diverge pas.
+
+L'élan compté est celui du blob **le long de l'axe de renvoi** : courir perpendiculairement
+à la balle n'accélère rien, il faut aller dedans.
+
+Mesuré sur trois échanges du jeu compilé, avant puis après : vitesse médiane en vol
+5,3 → 11,0 u/s, maximum 13,1 → 19,1 u/s, et 13,5 % du temps de vol passé au-dessus de
+15 u/s là où le plafond n'était jamais atteint.
+
+> **Le plafond de montée.** Sans garde-fou, un blob qui saute sous la balle lui met ses
+> 9,7 u/s d'impulsion dans la verticale : mesurée, la balle sortait par le haut du cadre.
+> La montée est écrêtée à 13,5 u/s (`Max Climb Speed`), ce qui n'aplatit que les
+> chandelles — le smash va vers le bas et le renvoi rasant sur le côté, ni l'un ni l'autre
+> n'est touché.
+
+> **Pourquoi un angle minimal de renvoi.** La vitesse de renvoi converge vers le plancher
+> au lieu de se conserver : deux frappes sans élan ramènent n'importe quelle balle à
+> 12 u/s. Une balle qui retombe pile sur le
 > sommet d'un blob immobile repart donc exactement à la verticale, retombe au même
 > endroit et repart à l'identique — sans fin. Le service posait précisément la balle
 > au-dessus du blob, ce qui rendait l'égalité exacte : un joueur qui ne touchait à rien
@@ -276,7 +304,10 @@ retourne localement quand la gelée se creuse, et une face arrière disparaîtra
 | `GameManager` | `Max Touches Per Side` | 0 = illimité ; 3 = règle volley classique |
 | `GameManager` | `Serve Goes To Loser` | Décoché : le gagnant du point engage |
 | `GameManager` | `Serve Offset X` | Décalage de la balle vers le filet au service |
-| `Ball` | `Hit Speed`, `Blob Velocity Influence` | Nervosité des échanges |
+| `Ball` | `Hit Speed` | Vitesse plancher d'un échange calme |
+| `Ball` | `Blob Drive`, `Speed Carry` | Puissance du smash, durée de vie d'une balle rapide |
+| `Ball` | `Blob Velocity Influence` | Part du déplacement du blob dans la direction du renvoi |
+| `Ball` | `Max Climb Speed` | Hauteur des chandelles ; trop haut, la balle sort du cadre |
 | `Ball` | `Min Vertical Angle` | Écart minimal du renvoi avec la verticale (0 = échanges bloquables) |
 | `Ball` (Rigidbody2D) | `Gravity Scale` | Balle flottante ou lourde |
 | `BlobLeft` / `BlobRight` | `Move Speed`, `Jump Speed`, `Gravity` | Sensation de déplacement |

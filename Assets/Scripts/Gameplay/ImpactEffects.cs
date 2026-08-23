@@ -61,9 +61,15 @@ namespace SmilyVolley
         {
             if (ball == null) return;
 
+            // La vitesse de renvoi vient d'être posée : la bouffée en prend la mesure.
+            // Une reprise molle fait deux grains, un smash en fait une gerbe.
+            float force = ball.maxSpeed > ball.hitSpeed
+                ? Mathf.InverseLerp(ball.hitSpeed, ball.maxSpeed, ball.Speed)
+                : 0f;
+
             // La balle touche encore le blob : sa position est le point de contact,
             // à un rayon près qui ne se voit pas sur une bouffée de cette taille.
-            Emit(hitBurst, ball.Body.position, hitParticles);
+            Emit(hitBurst, ball.Body.position, Mathf.RoundToInt(hitParticles * Mathf.Lerp(0.7f, 2f, force)));
         }
 
         void OnBallLanded(Vector2 position) => Emit(sandBurst, position, ballLandParticles);
