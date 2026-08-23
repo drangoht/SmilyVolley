@@ -97,7 +97,8 @@ namespace SmilyVolley.EditorTools
             GameManager manager = BuildGameManager(ball, left, right, hud, ai);
 
             BuildEffects(ball, left, right);
-            BuildAudio(ball, manager, left, right);
+            GameAudio audio = BuildAudio(ball, manager, left, right);
+            BuildMenu(manager, audio, left, right, hud);
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -589,7 +590,7 @@ namespace SmilyVolley.EditorTools
 
         // ------------------------------------------------------------------ son
 
-        static void BuildAudio(BallController ball, GameManager manager, BlobController left, BlobController right)
+        static GameAudio BuildAudio(BallController ball, GameManager manager, BlobController left, BlobController right)
         {
             var go = new GameObject("Audio");
             var audio = go.AddComponent<GameAudio>();
@@ -605,6 +606,7 @@ namespace SmilyVolley.EditorTools
             audio.blobLandClips = LoadClips("footstep_snow");
             audio.pointClips = LoadClips("impactBell_heavy");
             audio.musicClip = LoadMusic();
+            return audio;
         }
 
         /// <summary>Premier morceau trouvé dans le dossier de musique. Absent : le jeu se joue en silence.</summary>
@@ -681,6 +683,142 @@ namespace SmilyVolley.EditorTools
             }
 
             return clips.ToArray();
+        }
+
+        // ------------------------------------------------------------------ menu
+
+        const int MenuRowCount = 14;
+        const float MenuRowHeight = 52f;
+        const float MenuWidth = 1120f;
+
+        /// <summary>
+        /// Menu principal, options et pause, sur un canvas propre posé au-dessus du HUD.
+        /// Les lignes sont créées une bonne fois — quatorze suffisent à remplir l'écran —
+        /// puis <see cref="MenuController"/> y fait défiler les entrées de l'écran courant.
+        /// </summary>
+        static void BuildMenu(GameManager manager, GameAudio audio, BlobController left,
+            BlobController right, HudController hud)
+        {
+            var canvasGo = new GameObject("Menu");
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            // Au-dessus du HUD : le score ne doit pas transparaître à travers le panneau.
+            canvas.sortingOrder = 10;
+
+            var scaler = canvasGo.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+            canvasGo.AddComponent<GraphicRaycaster>();
+
+            var root = new GameObject("Panel", typeof(RectTransform));
+            root.transform.SetParent(canvasGo.transform, false);
+            var rootRect = (RectTransform)root.transform;
+            rootRect.anchorMin = Vector2.zero;
+            rootRect.anchorMax = Vector2.one;
+            rootRect.offsetMin = Vector2.zero;
+            rootRect.offsetMax = Vector2.zero;
+
+            // Voile sombre : le terrain reste lisible derrière, ce qui montre au joueur
+            // ce que ses réglages changent, sans concurrencer le texte.
+            var veil = root.AddComponent<Image>();
+            veil.color = new Color(0.04f, 0.06f, 0.10f, 0.88f);
+
+            Text title = MenuText(root.transform, "Title", 76, TextAnchor.UpperCenter,
+                new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(MenuWidth, 100f),
+                new Color(1f, 1f, 1f, 0.97f));
+
+            Text footer = MenuText(root.transform, "Footer", 28, TextAnchor.LowerCenter,
+                new Vector2(0.5f, 0f), new Vector2(0f, 42f), new Vector2(1700f, 44f),
+                new Color(0.70f, 0.78f, 0.88f));
+
+            var listGo = new GameObject("Rows", typeof(RectTransform));
+            listGo.transform.SetParent(root.transform, false);
+            var listRect = (RectTransform)listGo.transform;
+            listRect.anchorMin = new Vector2(0.5f, 0.5f);
+            listRect.anchorMax = new Vector2(0.5f, 0.5f);
+            listRect.pivot = new Vector2(0.5f, 1f);
+            listRect.sizeDelta = new Vector2(MenuWidth, MenuRowCount * MenuRowHeight);
+            listRect.anchoredPosition = new Vector2(0f, MenuRowCount * MenuRowHeight * 0.5f - 30f);
+
+            var menuRows = new MenuRow[MenuRowCount];
+            for (int i = 0; i < MenuRowCount; i++) menuRows[i] = BuildMenuRow(listRect, i);
+
+            var menu = canvasGo.AddComponent<MenuController>();
+            menu.manager = manager;
+            menu.gameAudio = audio;
+            menu.leftBlob = left;
+            menu.rightBlob = right;
+            menu.hud = hud;
+            menu.hudCanvas = hud != null ? hud.GetComponent<Canvas>() : null;
+            menu.root = root;
+            menu.titleText = title;
+            menu.footerText = footer;
+            menu.rows = menuRows;
+        }
+
+        static MenuRow BuildMenuRow(RectTransform parent, int index)
+        {
+            var go = new GameObject("Row" + index, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = new Vector2(0.5f, 1f);
+            rect.anchorMax = new Vector2(0.5f, 1f);
+            rect.pivot = new Vector2(0.5f, 1f);
+            rect.sizeDelta = new Vector2(MenuWidth, MenuRowHeight);
+            rect.anchoredPosition = new Vector2(0f, -index * MenuRowHeight);
+
+            // Le bandeau reste présent même transparent : c'est lui qui reçoit les clics
+            // souris, et le rendre visible ne demande qu'un changement de couleur.
+            var highlight = go.AddComponent<Image>();
+            highlight.color = Color.clear;
+
+            var button = go.AddComponent<Button>();
+            button.targetGraphic = highlight;
+            button.transition = Selectable.Transition.None;
+
+            Text label = MenuText(go.transform, "Label", 34, TextAnchor.MiddleLeft,
+                new Vector2(0f, 0.5f), new Vector2(34f, 0f), new Vector2(MenuWidth * 0.62f, MenuRowHeight),
+                Color.white, new Vector2(0f, 0.5f));
+
+            Text value = MenuText(go.transform, "Value", 34, TextAnchor.MiddleRight,
+                new Vector2(1f, 0.5f), new Vector2(-34f, 0f), new Vector2(MenuWidth * 0.36f, MenuRowHeight),
+                Color.white, new Vector2(1f, 0.5f));
+
+            var row = go.AddComponent<MenuRow>();
+            row.rect = rect;
+            row.highlight = highlight;
+            row.label = label;
+            row.value = value;
+            row.button = button;
+            return row;
+        }
+
+        static Text MenuText(Transform parent, string name, int fontSize, TextAnchor alignment,
+            Vector2 anchor, Vector2 anchoredPosition, Vector2 size, Color color, Vector2? pivot = null)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.pivot = pivot ?? new Vector2(0.5f, anchor.y);
+            rect.sizeDelta = size;
+            rect.anchoredPosition = anchoredPosition;
+
+            var text = go.AddComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = fontSize;
+            text.alignment = alignment;
+            text.color = color;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
+            // Les textes ne doivent pas intercepter les clics : c'est le bandeau de la
+            // ligne qui les reçoit, sinon survoler un libellé désactiverait le bouton.
+            text.raycastTarget = false;
+            return text;
         }
 
         // ------------------------------------------------------------------ outils

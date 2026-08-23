@@ -21,6 +21,26 @@ où la balle touche le blob.
 Aucune dépendance externe : tous les sprites sont générés par code au premier build de
 scène. Le projet se clone et se lance tel quel.
 
+## Menu et options
+
+Le jeu s'ouvre sur un menu ; « Jouer » y est déjà sélectionné, une frappe suffit à
+lancer une partie. `Échap` met en pause à tout moment.
+
+La navigation est au clavier — `↑ ↓` naviguer, `← →` régler, `Entrée` valider,
+`Échap` revenir — la souris fonctionne aussi. L'appui prolongé répète.
+
+| Section | Réglages |
+|---|---|
+| **Commandes** | Les six touches, réaffectables une à une, plus un retour à l'origine |
+| **Adversaire** | Ordinateur ou humain ; difficulté de Tranquille à Implacable |
+| **Règles** | Points pour gagner, écart de deux, touches par camp, comptage, camp qui engage |
+| **Son** | Musique et effets |
+| **Affichage** | Plein écran |
+
+Tout est conservé d'une partie à l'autre. Pour repartir de zéro, « Tout remettre par
+défaut » dans les options — ou supprimer la clé de registre
+`HKCU\Software\Smily\Smily Volley`.
+
 ## Commandes
 
 | Action | Joueur 1 (AZERTY) | Joueur 1 (QWERTY) | Joueur 2 |
@@ -28,8 +48,11 @@ scène. Le projet se clone et se lance tel quel.
 | Se déplacer | `Q` / `D` | `A` / `D` | `←` / `→` |
 | Sauter | `Z` ou `Espace` | `W` ou `Espace` | `↑` |
 
+Ce sont les touches d'origine : elles se réaffectent toutes dans les options.
+
 - `Tab` : basculer entre « contre l'ordinateur » et « 2 joueurs sur le même clavier »
 - `R` : relancer le match
+- `Échap` : menu de pause
 
 > **À savoir sur les touches.** L'énumération `Key` du package Input System identifie les
 > touches par leur **position physique** sur un clavier QWERTY, jamais par le caractère
@@ -142,10 +165,10 @@ Assets/
 │   └── BuildTools.cs          Build Windows + réglages projet
 ├── Scenes/Game.unity
 └── Scripts/             → assembly SmilyVolley
-    ├── Core/            GameManager, CameraFitter, Side
+    ├── Core/            GameManager, GameSettings, CameraFitter, Side
     ├── Gameplay/        BlobController, BallController, IA, entrées, ombre, particules
     ├── Audio/           GameAudio
-    └── UI/              HudController
+    └── UI/              HudController, MenuController, MenuRow
 docs/
 └── GDD.md               Game Design Document
 ```

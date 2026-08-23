@@ -79,6 +79,12 @@ namespace SmilyVolley
             altJump = Control(keyboard, altJumpKey);
         }
 
+        /// <summary>
+        /// À appeler après avoir changé une touche : les contrôles étant mis en cache,
+        /// modifier les champs ne suffit pas à les faire prendre en compte.
+        /// </summary>
+        public void RebindKeys() => boundKeyboard = null;
+
         /// <summary>Force la relecture des touches après modification depuis l'Inspector.</summary>
         void OnValidate() => boundKeyboard = null;
 

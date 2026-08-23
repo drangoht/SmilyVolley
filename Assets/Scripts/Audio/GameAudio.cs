@@ -33,6 +33,9 @@ namespace SmilyVolley
         public float musicFadeInSeconds = 1.5f;
 
         [Header("Volumes")]
+        [Tooltip("Multiplie tous les effets. C'est le curseur exposé dans le menu ; les " +
+                 "volumes par événement ci-dessous restent l'équilibre interne du mixage.")]
+        [Range(0f, 1f)] public float sfxVolume = 1f;
         [Range(0f, 1f)] public float blobHitVolume = 0.80f;
         [Range(0f, 1f)] public float bounceVolume = 0.45f;
         [Range(0f, 1f)] public float ballLandVolume = 0.70f;
@@ -231,6 +234,7 @@ namespace SmilyVolley
 
         void Play(AudioClip[] bank, float volume, float pitch = 1f)
         {
+            volume *= sfxVolume;
             if (bank == null || bank.Length == 0 || volume <= 0.001f) return;
 
             AudioClip clip = bank.Length == 1 ? bank[0] : bank[Random.Range(0, bank.Length)];

@@ -27,8 +27,9 @@ Toute la profondeur vient de **où** la balle touche le blob, pas d'un arsenal d
 
 - **Lisible en trois secondes.** Aucun tutoriel : la forme des blobs et la trajectoire
   de la balle disent tout.
-- **Immédiat.** Depuis le lancement, on joue en moins de deux secondes. Pas de menu
-  entre le joueur et l'échange.
+- **Immédiat.** Depuis le lancement, on joue en moins de deux secondes. Le menu
+  d'accueil ne s'y oppose pas : « Jouer » est déjà sélectionné, une frappe suffit.
+  Rien ne s'interpose ensuite entre deux échanges.
 - **Nerveux.** Le contrôle est sec : pas d'inertie, pas de glissade, pas de latence
   entre l'appui et le déplacement.
 - **Injuste seulement contre soi-même.** Une balle perdue est toujours un mauvais
@@ -409,7 +410,54 @@ Volontairement minimale : rien ne doit détourner le regard de la balle.
 | Centre | Service, point marqué, fin de match | Effacé au lâcher de balle |
 | Bas | Rappel des commandes, encre sombre sur le sable | Recomposé selon la disposition clavier et le mode |
 
-Aucun menu, aucun bouton : le mode se change en jeu, le match se relance en jeu.
+Le mode se change aussi en jeu (`Tab`) et le match se relance en jeu (`R`) : le menu
+n'est jamais un passage obligé pour les gestes courants.
+
+### 9.1 Menu et options
+
+Trois écrans, sur un canvas posé au-dessus du HUD.
+
+| Écran | Quand | Entrées |
+|---|---|---|
+| **Principal** | Au lancement | Jouer contre l'ordinateur, Jouer à deux, Options, Quitter |
+| **Pause** | `Échap` en cours de partie | Reprendre, Rejouer le match, Options, Menu principal, Quitter |
+| **Options** | Depuis l'un ou l'autre | Voir ci-dessous |
+
+Le menu **se superpose au terrain figé** plutôt que d'occuper une scène à part : le
+joueur voit ce qu'il règle — baisser la musique ou changer de difficulté se juge sur
+la partie qu'on a sous les yeux — et il n'y a ni chargement ni mise en place à
+dupliquer. Le HUD est masqué pendant ce temps : score et bandeau d'aide traversaient
+le voile et se mêlaient au texte du menu.
+
+Le temps est arrêté (`Time.timeScale = 0`), ce qui suspend d'un coup les coroutines de
+service, la physique et l'IA. La musique continue : un `AudioSource` ignore l'échelle
+de temps, et le silence brutal à l'ouverture du menu ferait croire à un plantage.
+
+**Navigation au clavier**, souris acceptée en complément : `↑ ↓` pour se déplacer,
+`← →` pour régler, `Entrée` pour valider, `Échap` pour revenir. L'appui prolongé
+répète — sans cela, passer un volume de 0 à 100 % demanderait vingt frappes. Le menu
+lit le clavier directement, comme le reste du jeu, plutôt que par le système
+d'événements de l'UI : deux façons de lire les touches auraient fini par diverger.
+
+### 9.2 Ce qui est réglable
+
+| Section | Réglages |
+|---|---|
+| **Commandes** | Les six touches, réaffectables une à une, plus un retour à la disposition d'origine |
+| **Adversaire** | Ordinateur ou humain ; difficulté sur cinq crans nommés, de Tranquille à Implacable |
+| **Règles** | Points pour gagner (5 à 21), écart de deux points, touches par camp, comptage, camp qui engage |
+| **Son** | Musique et effets, par pas de 5 % |
+| **Affichage** | Plein écran |
+
+Tout est conservé d'une partie à l'autre dans les PlayerPrefs, sous le préfixe
+`smily.`. Une valeur de touche hors énumération — sauvegarde d'une autre version —
+est ignorée au profit de la disposition d'origine : mieux vaut un réglage perdu qu'une
+touche fantôme injouable.
+
+La réaffectation capture la prochaine touche pressée en balayant `Keyboard.allKeys`.
+`Échap` annule. Les raccourcis globaux du jeu (`R`, `Tab`) sont coupés tant qu'un menu
+est ouvert — sans quoi affecter une commande à « R » relancerait le match dans la
+foulée.
 
 ---
 
@@ -525,6 +573,7 @@ SmilyVolley (assembly runtime)
 ├── Core/
 │   ├── GameManager      Machine à états du match, score, service, règles
 │   ├── CameraFitter     Cadrage adaptatif au format d'écran
+│   ├── GameSettings     Réglages du joueur et leur persistance
 │   └── Side             Camp du terrain (la valeur enum est le signe sur X)
 ├── Gameplay/
 │   ├── BlobController   Déplacement manuel, saut, butées, écrasement
@@ -539,7 +588,9 @@ SmilyVolley (assembly runtime)
 ├── Audio/
 │   └── GameAudio        Sons du match, pool de voix, variation de hauteur
 └── UI/
-    └── HudController    Score, messages, aide
+    ├── HudController    Score, messages, aide
+    ├── MenuController   Menu principal, options, pause
+    └── MenuRow          Une ligne de menu réutilisable
 
 SmilyVolley.Editor (assembly éditeur, exclu du build)
 ├── SceneBuilder         Assemble la scène complète
@@ -616,10 +667,10 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 - ~~**Sons.**~~ Fait : frappe, rebonds, point, fin de match (§ 10).
 - ~~**Particules d'impact.**~~ Fait : éclat, gerbe de sable, étincelle (§ 10).
 - ~~**Musique de fond** et son de saut.~~ Fait (§ 10).
-- **Réglage du volume** dans un menu d'options : la musique et les effets n'ont pour
-  l'instant de curseur que dans l'Inspector.
-- **Menu principal** : choix du mode, difficulté nommée (Tranquille / Normal / Redoutable),
-  score cible, options d'écran.
+- ~~**Menu principal**~~ : fait (§ 9.1) — mode, difficulté nommée, score cible, son,
+  commandes réaffectables, plein écran.
+- **Manette** : l'abstraction `BlobInput` est prête ; il reste à étendre la
+  réaffectation, qui ne connaît aujourd'hui que le clavier.
 
 ### Moyen terme — profondeur
 
@@ -668,3 +719,5 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 | **Chandelle** | Renvoi très haut, joué pour gagner du temps de replacement |
 | **CC0** | Renonciation au droit d'auteur : usage libre, y compris commercial, sans attribution |
 | **Bouffée** | Émission ponctuelle de particules déclenchée par un impact |
+| **PlayerPrefs** | Stockage clé-valeur d'Unity, ici le registre Windows, où vivent les réglages |
+| **Réaffectation** | Changer la touche associée à une action, en capturant la prochaine frappe |

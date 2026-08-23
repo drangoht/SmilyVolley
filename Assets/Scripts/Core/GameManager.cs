@@ -80,6 +80,12 @@ namespace SmilyVolley
 
         public MatchState State => state;
 
+        /// <summary>
+        /// Coupe les raccourcis globaux pendant qu'un menu est ouvert. Sans cela, régler
+        /// une touche sur « R » relancerait le match dans la foulée.
+        /// </summary>
+        public bool InputLocked { get; set; }
+
         void OnEnable()
         {
             if (ball != null)
@@ -106,6 +112,8 @@ namespace SmilyVolley
 
         void Update()
         {
+            if (InputLocked) return;
+
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null)
             {
