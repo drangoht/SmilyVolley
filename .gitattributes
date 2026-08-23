@@ -1,0 +1,112 @@
+# Smily Volley — attributs Git
+#
+# Le projet est sérialisé en « Force Text » (EditorSettings.m_SerializationMode: 2) :
+# scènes, prefabs et assets sont du YAML lisible et diffable. C'est ce qui rend les
+# règles ci-dessous utiles — en mode binaire elles n'auraient aucun effet.
+
+# ---------------------------------------------------------------- fins de ligne
+# LF partout, en dépôt comme dans la copie de travail. Les fichiers Unity DOIVENT
+# rester en LF : l'éditeur les réécrit en LF à chaque sauvegarde, et un checkout en
+# CRLF transformerait chaque sauvegarde en diff intégral.
+#
+# « eol=lf » est indispensable ici : sans lui, Git suit « core.eol », qui vaut
+# « native » — donc CRLF sur Windows. Le déclarer dans .gitattributes plutôt qu'en
+# config locale garantit le même comportement sur toutes les machines qui clonent.
+* text=auto eol=lf
+
+*.cs        text diff=csharp eol=lf
+*.md        text eol=lf
+*.json      text eol=lf
+*.asmdef    text eol=lf
+*.txt       text eol=lf
+*.shader    text eol=lf
+*.hlsl      text eol=lf
+*.cginc     text eol=lf
+.gitattributes text eol=lf
+.gitignore     text eol=lf
+
+*.unity              text eol=lf merge=unityyamlmerge
+*.prefab             text eol=lf merge=unityyamlmerge
+*.asset              text eol=lf merge=unityyamlmerge
+*.meta               text eol=lf merge=unityyamlmerge
+*.mat                text eol=lf merge=unityyamlmerge
+*.physicsMaterial2D  text eol=lf merge=unityyamlmerge
+*.physicMaterial     text eol=lf merge=unityyamlmerge
+*.controller         text eol=lf merge=unityyamlmerge
+*.anim               text eol=lf merge=unityyamlmerge
+*.overrideController text eol=lf merge=unityyamlmerge
+*.playable           text eol=lf merge=unityyamlmerge
+*.mask               text eol=lf merge=unityyamlmerge
+*.lighting           text eol=lf merge=unityyamlmerge
+*.terrainlayer       text eol=lf merge=unityyamlmerge
+
+# Le pilote « unityyamlmerge » fusionne le YAML Unity en comprenant sa structure,
+# là où un merge ligne à ligne produirait une scène corrompue. Il s'active une fois
+# par machine (chemin à adapter à la version de l'éditeur) :
+#
+#   git config --global merge.unityyamlmerge.name "Unity SmartMerge"
+#   git config --global merge.unityyamlmerge.driver \
+#     '"C:/Program Files/Unity/Hub/Editor/6000.5.6f1/Editor/Data/Tools/UnityYAMLMerge.exe" merge -p %O %A %B %A'
+#   git config --global merge.unityyamlmerge.recursive binary
+#
+# Sans cette configuration, Git retombe simplement sur la fusion par défaut :
+# l'attribut ci-dessus n'est jamais bloquant.
+
+# ---------------------------------------------------------------- binaires
+# Marqués binaires pour que Git ne tente ni normalisation ni diff textuel.
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.gif  binary
+*.ico  binary
+*.ttf  binary
+*.otf  binary
+*.dll  binary
+*.pdb  binary
+*.so   binary
+*.dylib binary
+*.a    binary
+*.lib  binary
+*.pdf  binary
+*.zip  binary
+*.7z   binary
+
+# ---------------------------------------------------------------- Git LFS
+# Le dépôt ne contient aujourd'hui que des PNG générés par code, tous sous 25 Ko :
+# les passer en LFS coûterait plus qu'il ne rapporterait. Les règles ci-dessous
+# anticipent l'arrivée de vrais assets — sources graphiques, modèles, audio, vidéo —
+# qui, eux, gonflent l'historique de façon irréversible.
+#
+# Elles supposent « git lfs install » fait sur la machine. Voir README.md.
+
+*.psd  filter=lfs diff=lfs merge=lfs -text
+*.psb  filter=lfs diff=lfs merge=lfs -text
+*.ai   filter=lfs diff=lfs merge=lfs -text
+*.tga  filter=lfs diff=lfs merge=lfs -text
+*.tif  filter=lfs diff=lfs merge=lfs -text
+*.tiff filter=lfs diff=lfs merge=lfs -text
+*.exr  filter=lfs diff=lfs merge=lfs -text
+*.hdr  filter=lfs diff=lfs merge=lfs -text
+
+*.fbx   filter=lfs diff=lfs merge=lfs -text
+*.blend filter=lfs diff=lfs merge=lfs -text
+*.obj   filter=lfs diff=lfs merge=lfs -text
+*.dae   filter=lfs diff=lfs merge=lfs -text
+*.3ds   filter=lfs diff=lfs merge=lfs -text
+
+*.wav  filter=lfs diff=lfs merge=lfs -text
+*.mp3  filter=lfs diff=lfs merge=lfs -text
+*.ogg  filter=lfs diff=lfs merge=lfs -text
+*.aif  filter=lfs diff=lfs merge=lfs -text
+*.aiff filter=lfs diff=lfs merge=lfs -text
+
+*.mp4 filter=lfs diff=lfs merge=lfs -text
+*.mov filter=lfs diff=lfs merge=lfs -text
+*.webm filter=lfs diff=lfs merge=lfs -text
+
+*.unitypackage filter=lfs diff=lfs merge=lfs -text
+
+# ---------------------------------------------------------------- linguist
+# Le décompte de langages de GitHub ignore ce qui n'est pas écrit à la main.
+Assets/Art/**   linguist-generated
+docs/**         linguist-documentation
