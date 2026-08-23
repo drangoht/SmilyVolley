@@ -27,7 +27,10 @@ Le jeu s'ouvre sur un menu ; « Jouer » y est déjà sélectionné, une frappe 
 lancer une partie. `Échap` met en pause à tout moment.
 
 La navigation est au clavier — `↑ ↓` naviguer, `← →` régler, `Entrée` valider,
-`Échap` revenir — la souris fonctionne aussi. L'appui prolongé répète.
+`Échap` revenir — la souris fonctionne aussi. Tout **boucle** : la dernière ligne d'un
+menu ramène à la première, et le dernier choix d'un réglage ramène au premier. L'appui
+prolongé répète sur les deux volumes, qui sont des échelles ; sur un réglage à choix il
+ne répète pas, sans quoi la liste tournerait sans qu'on puisse s'arrêter dessus.
 
 | Section | Réglages |
 |---|---|
@@ -35,7 +38,7 @@ La navigation est au clavier — `↑ ↓` naviguer, `← →` régler, `Entrée
 | **Adversaire** | Ordinateur ou humain ; difficulté de Tranquille à Implacable |
 | **Règles** | Points pour gagner, écart de deux, touches par camp, comptage, camp qui engage |
 | **Son** | Musique et effets |
-| **Apparence** | Style des blobs : Rond, Mou ou Anguleux |
+| **Apparence** | Style des blobs : Ferme, Molle ou Moulée |
 | **Affichage** | Plein écran |
 
 Tout est conservé d'une partie à l'autre. Pour repartir de zéro, « Tout remettre par

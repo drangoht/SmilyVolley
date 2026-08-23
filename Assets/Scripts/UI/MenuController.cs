@@ -65,10 +65,18 @@ namespace SmilyVolley
             public readonly System.Action Activate;
             public readonly System.Action<int> Adjust;
 
+            /// <summary>
+            /// L'appui prolongé fait-il défiler ce réglage ? Vrai pour une échelle — vingt
+            /// frappes pour monter un volume, sinon. Faux pour un choix : la liste bouclant,
+            /// le maintien la ferait tourner sans qu'on puisse s'arrêter dessus.
+            /// </summary>
+            public readonly bool Repeats;
+
             public Entry(EntryKind kind, string label, System.Func<string> value,
-                System.Action activate, System.Action<int> adjust)
+                System.Action activate, System.Action<int> adjust, bool repeats = false)
             {
                 Kind = kind; Label = label; Value = value; Activate = activate; Adjust = adjust;
+                Repeats = repeats;
             }
 
             public bool Selectable => Kind != EntryKind.Header;
@@ -201,18 +209,17 @@ namespace SmilyVolley
 
             if (pressed == Key.None) { heldDirection = Key.None; return; }
 
-            bool fresh = pressed != heldDirection;
-            if (fresh)
+            if (pressed != heldDirection)
             {
                 heldDirection = pressed;
                 nextRepeat = Time.unscaledTime + repeatDelay;
             }
-            else if (Time.unscaledTime < nextRepeat)
-            {
-                return;
-            }
             else
             {
+                bool adjusting = pressed == prevKey || pressed == nextKey;
+                if (adjusting && !RepeatsOnHold()) return;
+
+                if (Time.unscaledTime < nextRepeat) return;
                 nextRepeat = Time.unscaledTime + repeatInterval;
             }
 
@@ -241,6 +248,9 @@ namespace SmilyVolley
                 }
             }
         }
+
+        /// <summary>Le réglage sélectionné se laisse-t-il faire défiler à l'appui prolongé ?</summary>
+        bool RepeatsOnHold() => IsValid(selected) && entries[selected].Repeats;
 
         void Adjust(int direction)
         {
@@ -382,13 +392,13 @@ namespace SmilyVolley
             entries.Add(Value("Difficulté",
                 () => settings.rightPlayerIsAi ? DifficultyNames[DifficultyIndex()] : "—",
                 d => settings.aiDifficulty = DifficultyValues[
-                    Mathf.Clamp(DifficultyIndex() + d, 0, DifficultyValues.Length - 1)]));
+                    Cycle(DifficultyIndex(), d, DifficultyValues.Length)]));
 
             entries.Add(Header("Règles"));
             entries.Add(Value("Points pour gagner",
                 () => settings.pointsToWin.ToString(),
                 d => settings.pointsToWin = PointOptions[
-                    Mathf.Clamp(PointIndex() + d, 0, PointOptions.Length - 1)]));
+                    Cycle(PointIndex(), d, PointOptions.Length)]));
             entries.Add(Value("Écart de deux points",
                 () => settings.requireTwoPointLead ? "Exigé" : "Non",
                 d => settings.requireTwoPointLead = !settings.requireTwoPointLead));
@@ -404,18 +414,18 @@ namespace SmilyVolley
                 d => settings.serveGoesToLoser = !settings.serveGoesToLoser));
 
             entries.Add(Header("Son"));
-            entries.Add(Value("Musique",
+            entries.Add(Scale("Musique",
                 () => Percent(settings.musicVolume),
                 d => settings.musicVolume = Step(settings.musicVolume, d)));
-            entries.Add(Value("Effets",
+            entries.Add(Scale("Effets",
                 () => Percent(settings.sfxVolume),
                 d => settings.sfxVolume = Step(settings.sfxVolume, d)));
 
             entries.Add(Header("Apparence"));
             entries.Add(Value("Style des blobs",
                 () => BlobStyleNames[(int)settings.blobStyle],
-                d => settings.blobStyle = (BlobStyle)Mathf.Clamp(
-                    (int)settings.blobStyle + d, 0, BlobStyleNames.Length - 1)));
+                d => settings.blobStyle = (BlobStyle)Cycle(
+                    (int)settings.blobStyle, d, BlobStyleNames.Length)));
 
             entries.Add(Header("Affichage"));
             entries.Add(Value("Plein écran",
@@ -443,6 +453,20 @@ namespace SmilyVolley
 
         static Entry Value(string label, System.Func<string> value, System.Action<int> adjust)
             => new Entry(EntryKind.Value, label, value, null, adjust);
+
+        /// <summary>Réglage continu : l'appui prolongé le fait défiler.</summary>
+        static Entry Scale(string label, System.Func<string> value, System.Action<int> adjust)
+            => new Entry(EntryKind.Value, label, value, null, adjust, true);
+
+        /// <summary>
+        /// Choix suivant dans une liste fermée : après le dernier revient le premier.
+        ///
+        /// Une liste qui bute à son extrémité ne dit pas au joueur si elle est finie ou si le
+        /// menu a cessé de lire le clavier — c'est ce doute qu'on lève en bouclant. Le double
+        /// modulo tient le pas négatif : en C#, -1 % 5 vaut -1.
+        /// </summary>
+        static int Cycle(int index, int direction, int count)
+            => count <= 0 ? 0 : ((index + direction) % count + count) % count;
 
         int DifficultyIndex()
         {

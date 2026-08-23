@@ -434,10 +434,24 @@ service, la physique et l'IA. La musique continue : un `AudioSource` ignore l'é
 de temps, et le silence brutal à l'ouverture du menu ferait croire à un plantage.
 
 **Navigation au clavier**, souris acceptée en complément : `↑ ↓` pour se déplacer,
-`← →` pour régler, `Entrée` pour valider, `Échap` pour revenir. L'appui prolongé
-répète — sans cela, passer un volume de 0 à 100 % demanderait vingt frappes. Le menu
-lit le clavier directement, comme le reste du jeu, plutôt que par le système
-d'événements de l'UI : deux façons de lire les touches auraient fini par diverger.
+`← →` pour régler, `Entrée` pour valider, `Échap` pour revenir. Le menu lit le clavier
+directement, comme le reste du jeu, plutôt que par le système d'événements de l'UI :
+deux façons de lire les touches auraient fini par diverger.
+
+**Tout boucle.** La dernière ligne d'un écran ramène à la première ; le dernier choix
+d'un réglage ramène au premier. Une liste qui bute à son extrémité ne dit pas au joueur
+si elle est finie ou si le menu a cessé de lire le clavier — c'est ce doute qu'on lève.
+
+**L'appui prolongé répète, mais pas partout.** Il répète sur les deux volumes : sans
+cela, passer de 0 à 100 % demanderait vingt frappes. Il ne répète pas sur un réglage à
+choix, car la liste bouclant, le maintien la ferait tourner sans qu'on puisse s'arrêter
+dessus. C'est l'entrée qui le déclare, par `Entry.Repeats`.
+
+| Nature du réglage | Bouclage | Répétition |
+|---|---|---|
+| Choix nommé (difficulté, points, style) | Oui | Non |
+| Bascule à deux états (comptage, plein écran…) | Oui, par nature | Non |
+| Échelle (musique, effets) | Non — un volume butant à 0 et 100 % | Oui |
 
 ### 9.2 Ce qui est réglable
 
@@ -447,7 +461,7 @@ d'événements de l'UI : deux façons de lire les touches auraient fini par dive
 | **Adversaire** | Ordinateur ou humain ; difficulté sur cinq crans nommés, de Tranquille à Implacable |
 | **Règles** | Points pour gagner (5 à 21), écart de deux points, touches par camp, comptage, camp qui engage |
 | **Son** | Musique et effets, par pas de 5 % |
-| **Apparence** | Style des blobs : Rond, Mou ou Anguleux |
+| **Apparence** | Style des blobs : Ferme, Molle ou Moulée |
 | **Affichage** | Plein écran |
 
 Tout est conservé d'une partie à l'autre dans les PlayerPrefs, sous le préfixe
