@@ -31,6 +31,7 @@ namespace SmilyVolley.EditorTools
             Save(CreateNet(), "net.png", new Vector2(0.5f, 0f), PixelsPerUnit);
             Save(CreateSky(), "sky.png", new Vector2(0.5f, 0.5f), 32f);
             Save(CreateSquare(), "square.png", new Vector2(0.5f, 0.5f), 8f);
+            Save(CreateSpark(), "spark.png", new Vector2(0.5f, 0.5f), PixelsPerUnit);
 
             AssetDatabase.Refresh();
         }
@@ -124,6 +125,32 @@ namespace SmilyVolley.EditorTools
                     c = Color.Lerp(c, outline, Mathf.Clamp01((d - 0.88f) / 0.09f));
 
                     pixels[y * size + x] = new Color(c.r, c.g, c.b, alpha);
+                }
+            }
+
+            return Build(size, size, pixels);
+        }
+
+        /// <summary>
+        /// Grain de particule : un disque blanc à bord dégradé, teinté ensuite par le
+        /// système de particules. Le cœur reste plein sur la moitié du rayon, sinon une
+        /// bouffée de dix grains n'est qu'un voile laiteux au lieu d'un éclat lisible.
+        /// </summary>
+        static Texture2D CreateSpark()
+        {
+            const int size = 64;
+            var pixels = new Color[size * size];
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float nx = (x + 0.5f) / size * 2f - 1f;
+                    float ny = (y + 0.5f) / size * 2f - 1f;
+                    float d = Mathf.Sqrt(nx * nx + ny * ny);
+
+                    float alpha = Mathf.Clamp01((1f - d) / 0.5f);
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
                 }
             }
 

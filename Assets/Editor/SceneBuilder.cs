@@ -4,6 +4,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.Rendering;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.UI;
@@ -40,7 +41,10 @@ namespace SmilyVolley.EditorTools
         const int OrderBlob = 0;
         const int OrderBall = 5;
         const int OrderNet = 20;
+        const int OrderParticles = 30;
         const int OrderBorder = 50;
+
+        const string AudioFolder = "Assets/Audio/Kenney";
 
         static readonly Color SandColor = new Color(0.93f, 0.82f, 0.58f);
         static readonly Color SandLineColor = new Color(0.78f, 0.66f, 0.44f);
@@ -50,6 +54,7 @@ namespace SmilyVolley.EditorTools
         public static void Build()
         {
             PlaceholderArt.GenerateAll();
+            ConfigureAudioImport();
 
             var bouncyWall = CreateMaterial("Bouncy", 0.92f);
             var softGround = CreateMaterial("Sand", 0.45f);
@@ -88,7 +93,10 @@ namespace SmilyVolley.EditorTools
             right.GetComponent<HumanBlobInput>().enabled = false;
 
             HudController hud = BuildHud();
-            BuildGameManager(ball, left, right, hud, ai);
+            GameManager manager = BuildGameManager(ball, left, right, hud, ai);
+
+            BuildEffects(ball, left, right);
+            BuildAudio(ball, manager, left, right);
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -401,7 +409,7 @@ namespace SmilyVolley.EditorTools
             return text;
         }
 
-        static void BuildGameManager(BallController ball, BlobController left, BlobController right,
+        static GameManager BuildGameManager(BallController ball, BlobController left, BlobController right,
             HudController hud, AiBlobInput ai)
         {
             var go = new GameObject("GameManager");
@@ -413,6 +421,232 @@ namespace SmilyVolley.EditorTools
             manager.groundY = GroundY;
             manager.rightPlayerIsAi = true;
             manager.aiDifficulty = ai != null ? ai.difficulty : 0.65f;
+            return manager;
+        }
+
+        // ------------------------------------------------------------------ effets
+
+        /// <summary>
+        /// Trois systèmes de particules, un par nature d'impact, qu'<see cref="ImpactEffects"/>
+        /// alimente à la demande. Aucun n'émet tout seul : l'émission est désactivée et les
+        /// bouffées sont déclenchées par événement.
+        /// </summary>
+        static void BuildEffects(BallController ball, BlobController left, BlobController right)
+        {
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(PlaceholderArt.ArtFolder + "/spark.png");
+            if (texture == null) Debug.LogError("Texture de particule introuvable : spark.png");
+
+            Material material = CreateParticleMaterial(texture);
+
+            var root = new GameObject("Effects").transform;
+
+            // Frappe : éclat clair et bref, à peine soumis à la gravité.
+            ParticleSystem hit = BuildBurst(root, "HitBurst", material,
+                new Color(1f, 0.97f, 0.80f), new Vector2(0.13f, 0.28f), new Vector2(2.2f, 5.2f),
+                0.32f, 0.5f, 360f);
+
+            // Sable : grains projetés vers le haut qui retombent aussitôt.
+            ParticleSystem sand = BuildBurst(root, "SandBurst", material,
+                SandColor, new Vector2(0.12f, 0.26f), new Vector2(1.6f, 4.2f),
+                0.60f, 2.4f, 110f);
+
+            // Mur, filet, plafond : étincelle discrète.
+            ParticleSystem bounce = BuildBurst(root, "BounceBurst", material,
+                new Color(1f, 1f, 1f), new Vector2(0.09f, 0.19f), new Vector2(1.5f, 3.6f),
+                0.26f, 0.3f, 360f);
+
+            var go = new GameObject("ImpactEffects");
+            go.transform.SetParent(root, false);
+
+            var effects = go.AddComponent<ImpactEffects>();
+            effects.ball = ball;
+            effects.leftBlob = left;
+            effects.rightBlob = right;
+            effects.hitBurst = hit;
+            effects.sandBurst = sand;
+            effects.bounceBurst = bounce;
+        }
+
+        /// <param name="arc">360 = bouffée dans toutes les directions ; moins = cône vers le haut.</param>
+        static ParticleSystem BuildBurst(Transform parent, string name, Material material, Color color,
+            Vector2 sizeRange, Vector2 speedRange, float lifetime, float gravity, float arc)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+
+            var system = go.AddComponent<ParticleSystem>();
+
+            var main = system.main;
+            // Le système doit rester « en lecture » pour que les particules ajoutées par
+            // Emit() soient simulées : d'où playOnAwake et loop, malgré l'émission coupée.
+            main.playOnAwake = true;
+            main.loop = true;
+            main.duration = 4f;
+            main.startLifetime = lifetime;
+            main.startSpeed = new ParticleSystem.MinMaxCurve(speedRange.x, speedRange.y);
+            main.startSize = new ParticleSystem.MinMaxCurve(sizeRange.x, sizeRange.y);
+            main.startColor = color;
+            main.gravityModifier = gravity;
+            // En espace monde, une bouffée reste où elle est née même si le système bouge.
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.maxParticles = 300;
+
+            var emission = system.emission;
+            emission.enabled = false;
+
+            var shape = system.shape;
+            shape.enabled = true;
+            shape.shapeType = ParticleSystemShapeType.Circle;
+            shape.radius = 0.06f;
+            shape.radiusThickness = 1f;
+            shape.arc = arc;
+            // Le cône par défaut pointe vers +Z : on le bascule vers le haut de l'écran.
+            shape.rotation = new Vector3(0f, 0f, arc >= 360f ? 0f : 90f - arc * 0.5f);
+
+            var colorOverLifetime = system.colorOverLifetime;
+            colorOverLifetime.enabled = true;
+            colorOverLifetime.color = FadeOut(Color.white);
+
+            var sizeOverLifetime = system.sizeOverLifetime;
+            sizeOverLifetime.enabled = true;
+            sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.EaseInOut(0f, 1f, 1f, 0.2f));
+
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.renderMode = ParticleSystemRenderMode.Billboard;
+            renderer.sortingOrder = OrderParticles;
+
+            return system;
+        }
+
+        /// <summary>Dégradé qui garde la teinte et efface l'alpha sur la fin de vie.</summary>
+        static Gradient FadeOut(Color color)
+        {
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[] { new GradientColorKey(color, 0f), new GradientColorKey(color, 1f) },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 0.45f), new GradientAlphaKey(0f, 1f) });
+            return gradient;
+        }
+
+        /// <summary>
+        /// Matériau des particules.
+        ///
+        /// Il faut le shader Particles d'URP, et pas un shader de sprite : les shaders
+        /// « 2D/Sprite-* » ne sont pas dessinés pour un ParticleSystemRenderer. Testé —
+        /// les particules existaient, vivaient et se déclaraient visibles, mais rien
+        /// n'apparaissait à l'écran, même agrandies à cent pixels.
+        ///
+        /// Ce shader démarre opaque : le passer en transparence demande de régler à la
+        /// main la surface, le mélange, le ZWrite, le mot-clé et la file de rendu, ce que
+        /// l'inspecteur ferait sinon pour nous.
+        /// </summary>
+        static Material CreateParticleMaterial(Texture2D texture)
+        {
+            string path = MaterialsFolder + "/Particle.mat";
+
+            Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null)
+            {
+                Debug.LogError("Shader de particules URP introuvable.");
+                return null;
+            }
+
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                material = new Material(shader);
+                AssetDatabase.CreateAsset(material, path);
+            }
+            else
+            {
+                material.shader = shader;
+            }
+
+            material.SetTexture("_BaseMap", texture);
+            material.SetColor("_BaseColor", Color.white);
+
+            material.SetFloat("_Surface", 1f);   // 1 = Transparent
+            material.SetFloat("_Blend", 0f);     // 0 = Alpha
+            material.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)BlendMode.OneMinusSrcAlpha);
+            material.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
+            material.SetFloat("_DstBlendAlpha", (float)BlendMode.OneMinusSrcAlpha);
+            material.SetFloat("_ZWrite", 0f);
+            material.SetFloat("_Cull", (float)CullMode.Off);
+
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.DisableKeyword("_ALPHAPREMULTIPLY_ON");
+            material.DisableKeyword("_ALPHAMODULATE_ON");
+
+            material.SetOverrideTag("RenderType", "Transparent");
+            material.renderQueue = (int)RenderQueue.Transparent;
+
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        // ------------------------------------------------------------------ son
+
+        static void BuildAudio(BallController ball, GameManager manager, BlobController left, BlobController right)
+        {
+            var go = new GameObject("Audio");
+            var audio = go.AddComponent<GameAudio>();
+
+            audio.ball = ball;
+            audio.manager = manager;
+            audio.leftBlob = left;
+            audio.rightBlob = right;
+
+            audio.blobHitClips = LoadClips("impactSoft_medium");
+            audio.bounceClips = LoadClips("impactPlate_light");
+            audio.ballLandClips = LoadClips("impactSoft_heavy");
+            audio.blobLandClips = LoadClips("footstep_snow");
+            audio.pointClips = LoadClips("impactBell_heavy");
+        }
+
+        /// <summary>
+        /// Règle l'import des sons. Un effet court laissé en « Compressed In Memory » se
+        /// décode à chaque lecture : sur une frappe de balle, le hoquet s'entend. On les
+        /// décompresse une fois pour toutes au chargement, et on coupe la spatialisation
+        /// puisque le mixage est entièrement 2D.
+        /// </summary>
+        static void ConfigureAudioImport()
+        {
+            foreach (string guid in AssetDatabase.FindAssets("t:AudioClip", new[] { AudioFolder }))
+            {
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                if (AssetImporter.GetAtPath(path) is not AudioImporter importer) continue;
+
+                AudioImporterSampleSettings settings = importer.defaultSampleSettings;
+                settings.loadType = AudioClipLoadType.DecompressOnLoad;
+                settings.compressionFormat = AudioCompressionFormat.Vorbis;
+                settings.quality = 0.7f;
+                // Depuis Unity 6, le préchargement est un réglage par plateforme porté
+                // par les sample settings, plus une propriété de l'importeur.
+                settings.preloadAudioData = true;
+
+                importer.defaultSampleSettings = settings;
+                importer.forceToMono = true;
+                importer.SaveAndReimport();
+            }
+        }
+
+        /// <summary>Charge les variantes 000 à 004 d'une famille de sons du pack Kenney.</summary>
+        static AudioClip[] LoadClips(string prefix, int count = 5)
+        {
+            var clips = new System.Collections.Generic.List<AudioClip>(count);
+
+            for (int i = 0; i < count; i++)
+            {
+                string path = $"{AudioFolder}/{prefix}_{i:000}.ogg";
+                var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
+
+                if (clip != null) clips.Add(clip);
+                else Debug.LogWarning("Son introuvable : " + path);
+            }
+
+            return clips.ToArray();
         }
 
         // ------------------------------------------------------------------ outils

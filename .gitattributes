@@ -106,6 +106,12 @@
 
 *.unitypackage filter=lfs diff=lfs merge=lfs -text
 
+# Exception : les sons de placement (Kenney, CC0) pèsent 5 à 15 Ko pièce, 250 Ko en
+# tout. Les router vers LFS imposerait git-lfs à quiconque clone, pour un gain nul —
+# et le projet tient à se cloner et se lancer sans dépendance. Ils restent donc en
+# Git ordinaire ; la règle *.ogg ci-dessus vaut pour les vrais assets audio à venir.
+Assets/Audio/**/*.ogg -filter -diff -merge binary
+
 # ---------------------------------------------------------------- linguist
 # Le décompte de langages de GitHub ignore ce qui n'est pas écrit à la main.
 Assets/Art/**   linguist-generated

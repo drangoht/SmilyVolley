@@ -14,6 +14,12 @@ namespace SmilyVolley
         [Header("Identité")]
         public Side side = Side.Left;
 
+        /// <summary>
+        /// Le blob vient de retoucher le sable : position du contact et vitesse de chute.
+        /// Sert au bruit de pas et à la gerbe de sable.
+        /// </summary>
+        public event System.Action<Vector2, float> Landed;
+
         [Header("Déplacement")]
         public float moveSpeed = 6.5f;
         public float jumpSpeed = 9.7f;
@@ -127,7 +133,12 @@ namespace SmilyVolley
             if (next.y <= groundY)
             {
                 next.y = groundY;
-                if (!grounded) squash = 0.78f;
+                if (!grounded)
+                {
+                    squash = 0.78f;
+                    // Vitesse de chute avant remise à zéro : elle dose l'impact sonore et visuel.
+                    Landed?.Invoke(new Vector2(next.x, groundY), Mathf.Abs(velocity.y));
+                }
                 velocity.y = 0f;
                 grounded = true;
             }

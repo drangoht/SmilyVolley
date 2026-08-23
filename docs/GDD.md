@@ -424,7 +424,55 @@ Sans lumière dans la scène, tous les sprites seraient rendus **noirs**. Une `L
 globale blanche d'intensité 1 reproduit l'aspect non éclairé, tout en laissant la porte
 ouverte à l'éclairage 2D (halo sur la balle, ambiance de fin de journée).
 
-**Audio** : absent à ce stade. Voir la feuille de route.
+**Particules** : trois bouffées, une par nature d'impact, émises au point de contact
+exact. Elles sont le retour immédiat qui manquait : avant elles, une frappe et un
+effleurement se ressemblaient.
+
+| Effet | Déclencheur | Aspect |
+|---|---|---|
+| Éclat | Balle frappée par un blob | Bouffée jaune pâle, 10 grains, 0,32 s |
+| Gerbe de sable | Balle qui retombe, blob qui atterrit | Grains couleur sable projetés vers le haut qui retombent, 0,60 s |
+| Étincelle | Mur, filet, plafond | Six grains blancs, 0,26 s |
+
+Les grains d'un blob qui atterrit sont proportionnels à sa vitesse de chute : un
+petit saut soulève à peine de la poussière.
+
+> **Piège de rendu.** Les particules doivent utiliser le shader
+> `Universal Render Pipeline/Particles/Unlit`, jamais un shader de sprite. Un
+> `ParticleSystemRenderer` portant `2D/Sprite-Unlit-Default` n'est tout simplement pas
+> dessiné : les particules existent, vivent, se déclarent visibles — et rien n'apparaît,
+> même grossies à cent pixels. Le shader particules démarre en revanche *opaque* : il
+> faut lui régler à la main surface, mélange, ZWrite, mot-clé et file de rendu, ce que
+> l'inspecteur ferait sinon. Tout est fait dans `SceneBuilder.CreateParticleMaterial`.
+
+## Audio
+
+**Sons** : extraits du pack *Impact Sounds* de [Kenney](https://kenney.nl/assets/impact-sounds),
+en **CC0** (domaine public, aucune attribution exigée). Provenance et correspondance
+fichier par fichier dans `Assets/Audio/Kenney/SOURCE.md`.
+
+| Événement | Son | Volume |
+|---|---|---|
+| Frappe sur un blob | `impactSoft_medium` | 0,80 |
+| Rebond mur / filet / plafond | `impactPlate_light` | 0,45 × force de l'impact |
+| Balle sur le sable | `impactSoft_heavy` | 0,70 |
+| Atterrissage d'un blob | `footstep_snow` | 0,22 × vitesse de chute |
+| Point marqué | `impactBell_heavy` | 0,65 |
+| Fin de match | `impactBell_heavy`, arpège 0-4-7-12 demi-tons | 0,75 |
+
+Trois principes :
+
+- **Cinq variantes par événement**, tirées au hasard, plus une variation de hauteur de
+  ±12 %. C'est la répétition à l'identique que l'oreille repère, pas le son lui-même :
+  sans cela un échange un peu long dégénère en cliquetis mécanique.
+- **Le volume porte l'information.** Un frôlement contre le filet et un boulet contre le
+  mur ne sonnent pas pareil ; un blob qui retombe d'un petit saut est presque muet.
+- **Mixage entièrement 2D.** Le terrain tient dans l'écran : spatialiser ne ferait que
+  déséquilibrer le casque au détriment du joueur de gauche.
+
+La fanfare de fin de match n'est pas un fichier : le pack n'en fournit pas, alors
+`GameAudio` rejoue la cloche du point sur une montée d'accord parfait, en repitchant
+d'un rapport 2^(n/12) par demi-ton.
 
 ---
 
@@ -446,7 +494,10 @@ SmilyVolley (assembly runtime)
 │   ├── BallController   Frappe radiale, plafond de vitesse, événements
 │   ├── GroundShadow     Ombre projetée, indicateur de hauteur
 │   ├── GroundSurface    Marqueur du collider de sol
+│   ├── ImpactEffects    Bouffées de particules aux points de contact
 │   └── ScreenCeiling    Mur invisible calé sur le haut de l'écran
+├── Audio/
+│   └── GameAudio        Sons du match, pool de voix, variation de hauteur
 └── UI/
     └── HudController    Score, messages, aide
 
@@ -508,6 +559,11 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 | `Ball` *(Rigidbody2D)* | `Gravity Scale` | Balle flottante ou lourde |
 | `BlobLeft` / `BlobRight` | `Move Speed`, `Jump Speed`, `Gravity` | Sensation de déplacement |
 | `BlobRight` *(AiBlobInput)* | `Aim Offset`, `Jump Reach` | Style de jeu de l'IA |
+| `Audio` *(GameAudio)* | Volumes par événement | Équilibre du mixage |
+| `Audio` *(GameAudio)* | `Pitch Jitter` | Variation de hauteur ; 0 = répétition mécanique |
+| `Audio` *(GameAudio)* | `Voice Count` | Sons pouvant se superposer |
+| `Audio` *(GameAudio)* | `Victory Semitones` | Notes de la fanfare de fin de match |
+| `ImpactEffects` | `Hit / Ball Land / Blob Land / Bounce Particles` | Densité des bouffées |
 
 ---
 
@@ -515,9 +571,9 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 
 ### Court terme — le jeu qu'il manque
 
-- **Sons.** Frappe, rebond mur, rebond filet, point, fin de match. C'est le manque le
-  plus criant : la frappe radiale gagnerait énormément à être entendue.
-- **Particules d'impact** sur la frappe et sur le point de chute.
+- ~~**Sons.**~~ Fait : frappe, rebonds, point, fin de match (§ 10).
+- ~~**Particules d'impact.**~~ Fait : éclat, gerbe de sable, étincelle (§ 10).
+- **Musique de fond** discrète, et un son de saut — les deux manquent encore.
 - **Menu principal** : choix du mode, difficulté nommée (Tranquille / Normal / Redoutable),
   score cible, options d'écran.
 
@@ -566,3 +622,5 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 | **Side out** | Comptage historique où seul le camp au service peut marquer |
 | **Squash & stretch** | Déformation du sprite à l'impulsion et à l'atterrissage |
 | **Chandelle** | Renvoi très haut, joué pour gagner du temps de replacement |
+| **CC0** | Renonciation au droit d'auteur : usage libre, y compris commercial, sans attribution |
+| **Bouffée** | Émission ponctuelle de particules déclenchée par un impact |

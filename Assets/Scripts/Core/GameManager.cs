@@ -72,6 +72,12 @@ namespace SmilyVolley
         AiBlobInput rightAi;
         HumanBlobInput leftHuman;
 
+        /// <summary>Un point vient d'être attribué au camp indiqué.</summary>
+        public event System.Action<Side> PointScored;
+
+        /// <summary>Le camp indiqué remporte le match.</summary>
+        public event System.Action<Side> MatchWon;
+
         public MatchState State => state;
 
         void OnEnable()
@@ -293,6 +299,8 @@ namespace SmilyVolley
                 hud.ShowMessage(winnerScores ? reason : "Changement de service : " + winner.Label());
             }
 
+            PointScored?.Invoke(winner);
+
             if (HasWon(winner))
             {
                 EndMatch(winner);
@@ -318,6 +326,8 @@ namespace SmilyVolley
             {
                 hud.ShowMessage(winner.Label() + " gagne le match !\nAppuyez sur " + HumanBlobInput.LabelOf(restartKey) + " pour rejouer");
             }
+
+            MatchWon?.Invoke(winner);
         }
 
         IEnumerator NextPointRoutine()

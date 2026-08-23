@@ -35,6 +35,13 @@ namespace SmilyVolley
         /// <summary>Déclenché au premier contact avec le sol depuis le service.</summary>
         public event Action<Vector2> GroundHit;
 
+        /// <summary>
+        /// Rebond sur un mur, le filet ou le plafond : position du contact et vitesse d'impact.
+        /// Purement décoratif — l'arbitrage ne s'y intéresse pas — mais le son et les
+        /// particules ont besoin de savoir *où* et *avec quelle force*.
+        /// </summary>
+        public event Action<Vector2, float> BounceHit;
+
         /// <summary>Nature d'un collider rencontré, résolue une seule fois puis mémorisée.</summary>
         readonly struct Contact
         {
@@ -132,12 +139,28 @@ namespace SmilyVolley
                 return;
             }
 
-            if (contact.IsGround && !groundReported)
+            if (contact.IsGround)
             {
+                if (groundReported) return;
                 groundReported = true;
                 GroundHit?.Invoke(body.position);
+                return;
+            }
+
+            // Ni blob ni sol : mur, filet ou plafond.
+            if (BounceHit != null)
+            {
+                BounceHit(ContactPoint(collision), collision.relativeVelocity.magnitude);
             }
         }
+
+        /// <summary>
+        /// Point de contact réel du choc, ou le centre de la balle si la physique n'en
+        /// rapporte aucun. C'est là que se placent l'étincelle et le son.
+        /// GetContact évite le tableau que <c>Collision2D.contacts</c> alloue à chaque appel.
+        /// </summary>
+        Vector2 ContactPoint(Collision2D collision)
+            => collision.contactCount > 0 ? collision.GetContact(0).point : body.position;
 
         void OnCollisionStay2D(Collision2D collision)
         {

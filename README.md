@@ -88,11 +88,41 @@ Deux murs invisibles évitent les temps morts :
 - Le sommet du filet est coiffé d'un `CircleCollider2D` : un sommet plat laisserait la balle
   s'y poser en équilibre et figerait l'échange.
 
+## Sons et particules
+
+Chaque impact a un retour sonore et visuel :
+
+| Événement | Son | Particules |
+|---|---|---|
+| Balle frappée par un blob | Impact mat | Éclat jaune pâle |
+| Rebond mur / filet / plafond | Tap léger, volume selon la force | Étincelle blanche |
+| Balle sur le sable | Impact sourd | Gerbe de sable |
+| Blob qui atterrit | Pas dans le sable, selon la vitesse de chute | Poussière proportionnelle |
+| Point marqué | Cloche | — |
+| Fin de match | Arpège de cloches | — |
+
+Les sons viennent du pack **Impact Sounds** de [Kenney](https://kenney.nl/assets/impact-sounds),
+en **CC0** — domaine public, aucune attribution exigée (elle est faite ici de bon gré).
+Détail fichier par fichier dans [`Assets/Audio/Kenney/SOURCE.md`](Assets/Audio/Kenney/SOURCE.md).
+
+Cinq variantes par événement, tirées au hasard et repitchées de ±12 % : c'est la
+répétition à l'identique que l'oreille repère, pas le son. Sans cette variation, un
+échange un peu long devient un cliquetis mécanique.
+
+> **Si vous ajoutez des particules.** Elles doivent utiliser le shader
+> `Universal Render Pipeline/Particles/Unlit`, jamais un shader de sprite. Un
+> `ParticleSystemRenderer` portant `2D/Sprite-Unlit-Default` n'est pas dessiné du tout —
+> les particules existent, vivent et se déclarent visibles, mais rien n'apparaît à
+> l'écran. En contrepartie, le shader particules démarre opaque : surface, mélange,
+> ZWrite, mot-clé et file de rendu se règlent à la main dans
+> `SceneBuilder.CreateParticleMaterial`.
+
 ## Structure
 
 ```
 Assets/
 ├── Art/                 Sprites générés par code + matériaux physiques
+├── Audio/Kenney/        Sons CC0 + licence et provenance
 ├── Settings/            Pipeline URP, Renderer 2D, volume profile par défaut
 ├── Editor/              → assembly SmilyVolley.Editor (exclue du build)
 │   ├── PlaceholderArt.cs      Dessine les PNG (blobs, balle, filet, ciel, ombre)
@@ -102,7 +132,8 @@ Assets/
 ├── Scenes/Game.unity
 └── Scripts/             → assembly SmilyVolley
     ├── Core/            GameManager, CameraFitter, Side
-    ├── Gameplay/        BlobController, BallController, IA, entrées, ombre
+    ├── Gameplay/        BlobController, BallController, IA, entrées, ombre, particules
+    ├── Audio/           GameAudio
     └── UI/              HudController
 docs/
 └── GDD.md               Game Design Document
@@ -164,6 +195,8 @@ la porte ouverte aux effets d'éclairage 2D (halo sur la balle, ombres portées,
 | `Ball` | `Min Vertical Angle` | Écart minimal du renvoi avec la verticale (0 = échanges bloquables) |
 | `Ball` (Rigidbody2D) | `Gravity Scale` | Balle flottante ou lourde |
 | `BlobLeft` / `BlobRight` | `Move Speed`, `Jump Speed`, `Gravity` | Sensation de déplacement |
+| `Audio` | Volumes par événement, `Pitch Jitter` | Équilibre et variété du mixage |
+| `ImpactEffects` | Nombre de particules par effet | Densité des bouffées |
 
 ## Notes de performance
 
@@ -182,7 +215,7 @@ Le jeu est léger, mais le code évite les schémas qui coûtent cher dès qu'un
 
 ## Pistes pour la suite
 
-- Sons (frappe, rebond, point) et particules d'impact — le manque le plus criant
+- Musique de fond discrète, et un son de saut
 - Menu principal, sélection de mode et écran d'options
 - Effet de rotation sur la balle influençant la trajectoire
 - Sprites définitifs en remplacement des PNG générés
