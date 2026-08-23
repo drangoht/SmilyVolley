@@ -27,7 +27,9 @@ Le jeu s'ouvre sur un menu ; « Jouer » y est déjà sélectionné, une frappe 
 lancer une partie. `Échap` met en pause à tout moment.
 
 La navigation est au clavier — `↑ ↓` naviguer, `← →` régler, `Entrée` valider,
-`Échap` revenir — la souris fonctionne aussi. Tout **boucle** : la dernière ligne d'un
+`Échap` revenir. `+` et `−` du pavé numérique doublent `← →`. La souris fait tout
+aussi : la **molette** déplace la sélection, et chaque réglage porte un `−` et un `+`
+— sans eux le clic ne saurait que faire monter une valeur. Tout **boucle** : la dernière ligne d'un
 menu ramène à la première, et le dernier choix d'un réglage ramène au premier. L'appui
 prolongé répète sur les deux volumes, qui sont des échelles ; sur un réglage à choix il
 ne répète pas, sans quoi la liste tournerait sans qu'on puisse s'arrêter dessus.

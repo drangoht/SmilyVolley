@@ -726,6 +726,16 @@ namespace SmilyVolley.EditorTools
         const float MenuRowHeight = 52f;
         const float MenuWidth = 1120f;
 
+        // Colonne de droite d'une ligne de menu, mesurée depuis son bord droit. Le libellé
+        // s'arrête avant le − le plus à gauche : les valeurs s'alignent alors toutes sur la
+        // même colonne, que la ligne porte des boutons ou non.
+        const float MenuStepSize = 44f;
+        const float MenuStepPlusX = -28f;
+        const float MenuStepMinusX = -80f;
+        const float MenuValueX = -132f;
+        const float MenuValueWidth = 380f;
+        const float MenuLabelWidth = 540f;
+
         /// <summary>
         /// Menu principal, options et pause, sur un canvas propre posé au-dessus du HUD.
         /// Les lignes sont créées une bonne fois — quatorze suffisent à remplir l'écran —
@@ -814,11 +824,11 @@ namespace SmilyVolley.EditorTools
             button.transition = Selectable.Transition.None;
 
             Text label = MenuText(go.transform, "Label", 34, TextAnchor.MiddleLeft,
-                new Vector2(0f, 0.5f), new Vector2(34f, 0f), new Vector2(MenuWidth * 0.62f, MenuRowHeight),
+                new Vector2(0f, 0.5f), new Vector2(34f, 0f), new Vector2(MenuLabelWidth, MenuRowHeight),
                 Color.white, new Vector2(0f, 0.5f));
 
             Text value = MenuText(go.transform, "Value", 34, TextAnchor.MiddleRight,
-                new Vector2(1f, 0.5f), new Vector2(-34f, 0f), new Vector2(MenuWidth * 0.36f, MenuRowHeight),
+                new Vector2(1f, 0.5f), new Vector2(MenuValueX, 0f), new Vector2(MenuValueWidth, MenuRowHeight),
                 Color.white, new Vector2(1f, 0.5f));
 
             var row = go.AddComponent<MenuRow>();
@@ -827,7 +837,53 @@ namespace SmilyVolley.EditorTools
             row.label = label;
             row.value = value;
             row.button = button;
+            row.decrease = BuildMenuStep(go.transform, "Minus", "−", MenuStepMinusX);
+            row.increase = BuildMenuStep(go.transform, "Plus", "+", MenuStepPlusX);
             return row;
+        }
+
+        /// <summary>
+        /// Bouton − ou + d'une ligne réglable.
+        ///
+        /// Sans eux, la souris ne sait que faire monter une valeur : le clic sur la ligne
+        /// équivaut à la flèche droite, et rien ne la fait redescendre. Ils sont enfants de
+        /// la ligne, donc au-dessus de son bandeau dans la pile de rendu : le clic leur
+        /// revient, pas à la ligne.
+        /// </summary>
+        static Button BuildMenuStep(Transform parent, string name, string glyph, float x)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = new Vector2(1f, 0.5f);
+            rect.anchorMax = new Vector2(1f, 0.5f);
+            rect.pivot = new Vector2(1f, 0.5f);
+            rect.sizeDelta = new Vector2(MenuStepSize, MenuStepSize);
+            rect.anchoredPosition = new Vector2(x, 0f);
+
+            var background = go.AddComponent<Image>();
+            background.color = Color.white;
+
+            var button = go.AddComponent<Button>();
+            button.targetGraphic = background;
+            button.transition = Selectable.Transition.ColorTint;
+
+            // Le fond est blanc : c'est la teinte qui porte l'opacité, et donc le survol.
+            ColorBlock colors = button.colors;
+            colors.normalColor = new Color(1f, 1f, 1f, 0.10f);
+            colors.highlightedColor = new Color(1f, 1f, 1f, 0.24f);
+            colors.pressedColor = new Color(1f, 1f, 1f, 0.40f);
+            colors.selectedColor = colors.normalColor;
+            colors.disabledColor = new Color(1f, 1f, 1f, 0.04f);
+            colors.fadeDuration = 0.06f;
+            button.colors = colors;
+
+            MenuText(go.transform, "Glyph", 36, TextAnchor.MiddleCenter,
+                new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(MenuStepSize, MenuStepSize),
+                new Color(1f, 0.86f, 0.45f)).text = glyph;
+
+            return button;
         }
 
         static Text MenuText(Transform parent, string name, int fontSize, TextAnchor alignment,

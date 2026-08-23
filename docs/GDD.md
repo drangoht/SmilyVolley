@@ -433,10 +433,18 @@ Le temps est arrêté (`Time.timeScale = 0`), ce qui suspend d'un coup les corou
 service, la physique et l'IA. La musique continue : un `AudioSource` ignore l'échelle
 de temps, et le silence brutal à l'ouverture du menu ferait croire à un plantage.
 
-**Navigation au clavier**, souris acceptée en complément : `↑ ↓` pour se déplacer,
-`← →` pour régler, `Entrée` pour valider, `Échap` pour revenir. Le menu lit le clavier
-directement, comme le reste du jeu, plutôt que par le système d'événements de l'UI :
-deux façons de lire les touches auraient fini par diverger.
+**Navigation au clavier** : `↑ ↓` pour se déplacer, `← →` pour régler, `Entrée` pour
+valider, `Échap` pour revenir. Le `+` et le `−` du pavé numérique doublent les flèches de
+réglage — ils disent ce qu'ils font, là où `← →` demandent d'avoir lu le bandeau d'aide.
+Le menu lit le clavier directement, comme le reste du jeu, plutôt que par le système
+d'événements de l'UI : deux façons de lire les touches auraient fini par diverger.
+
+**La souris fait tout aussi.** La molette déplace la sélection ; un délai minimal entre
+deux crans l'empêche de traverser l'écran d'un coup de doigt, et le pas ne dépend pas de
+l'amplitude rapportée — 120 sur une souris, une fraction sur un pavé tactile. Chaque
+ligne réglable porte un `−` et un `+` : sans eux, le clic sur la ligne équivaut à la
+flèche droite et rien ne fait redescendre une valeur. Ces boutons sont enfants de la
+ligne, donc au-dessus de son bandeau : le clic leur revient, pas à elle.
 
 **Tout boucle.** La dernière ligne d'un écran ramène à la première ; le dernier choix
 d'un réglage ramène au premier. Une liste qui bute à son extrémité ne dit pas au joueur

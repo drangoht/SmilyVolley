@@ -55,6 +55,11 @@ namespace SmilyVolley
         public float repeatDelay = 0.42f;
         public float repeatInterval = 0.07f;
 
+        [Header("Souris")]
+        [Tooltip("Temps minimal entre deux crans de molette. Une molette libre en envoie " +
+                 "une dizaine par seconde : sans ce délai, la sélection traverserait l'écran.")]
+        public float wheelInterval = 0.05f;
+
         enum EntryKind { Header, Action, Value, KeyBind }
 
         readonly struct Entry
@@ -99,6 +104,7 @@ namespace SmilyVolley
         int awaitingKey = -1;
         Key heldDirection = Key.None;
         float nextRepeat;
+        float nextWheel;
 
         public bool IsOpen => current != Screen.None;
 
@@ -114,6 +120,8 @@ namespace SmilyVolley
             {
                 int rowIndex = i;
                 if (rows[i].button != null) rows[i].button.onClick.AddListener(() => OnRowClicked(rowIndex));
+                if (rows[i].decrease != null) rows[i].decrease.onClick.AddListener(() => OnStepClicked(rowIndex, -1));
+                if (rows[i].increase != null) rows[i].increase.onClick.AddListener(() => OnStepClicked(rowIndex, 1));
             }
         }
 
@@ -193,6 +201,28 @@ namespace SmilyVolley
             }
 
             HandleDirection(keyboard);
+            HandleWheel();
+        }
+
+        /// <summary>
+        /// La molette déplace la sélection, comme les flèches haut et bas.
+        ///
+        /// Un cran de molette n'arrive que sur une image, mais une molette libre en envoie
+        /// une rafale : le délai minimal entre deux pas évite que la sélection traverse
+        /// l'écran d'un coup de doigt. Le pas ne dépend pas de l'amplitude rapportée, qui
+        /// vaut 120 sur une souris et une fraction sur un pavé tactile.
+        /// </summary>
+        void HandleWheel()
+        {
+            Mouse mouse = Mouse.current;
+            if (mouse == null) return;
+
+            float scroll = mouse.scroll.ReadValue().y;
+            if (Mathf.Abs(scroll) < 0.01f) return;
+            if (Time.unscaledTime < nextWheel) return;
+
+            nextWheel = Time.unscaledTime + wheelInterval;
+            Move(scroll > 0f ? -1 : 1);
         }
 
         /// <summary>
@@ -201,11 +231,13 @@ namespace SmilyVolley
         /// </summary>
         void HandleDirection(Keyboard keyboard)
         {
+            // Le pavé numérique double les flèches de réglage : « + » et « − » disent
+            // ce qu'ils font, là où « ← → » demandent d'avoir lu le bandeau d'aide.
             Key pressed = Key.None;
             if (keyboard[upKey].isPressed) pressed = upKey;
             else if (keyboard[downKey].isPressed) pressed = downKey;
-            else if (keyboard[prevKey].isPressed) pressed = prevKey;
-            else if (keyboard[nextKey].isPressed) pressed = nextKey;
+            else if (keyboard[prevKey].isPressed || keyboard[Key.NumpadMinus].isPressed) pressed = prevKey;
+            else if (keyboard[nextKey].isPressed || keyboard[Key.NumpadPlus].isPressed) pressed = nextKey;
 
             if (pressed == Key.None) { heldDirection = Key.None; return; }
 
@@ -279,6 +311,16 @@ namespace SmilyVolley
                 case Screen.Pause: Close(); break;
                 default: break; // le menu principal n'a pas d'écran parent
             }
+        }
+
+        /// <summary>Clic sur le − ou le + d'une ligne : la ligne devient courante, puis se règle.</summary>
+        void OnStepClicked(int rowIndex, int direction)
+        {
+            int index = scroll + rowIndex;
+            if (!IsValid(index)) return;
+
+            selected = index;
+            Adjust(direction);
         }
 
         void OnRowClicked(int rowIndex)
@@ -535,7 +577,9 @@ namespace SmilyVolley
                 }
 
                 rows[i].Show(entry.Label, entry.Value != null ? entry.Value() : string.Empty,
-                    index == selected, entry.Kind == EntryKind.KeyBind && awaitingKey >= 0 && index == selected);
+                    index == selected,
+                    entry.Kind == EntryKind.KeyBind && awaitingKey >= 0 && index == selected,
+                    entry.Adjust != null);
             }
 
             if (footerText != null) footerText.text = BuildFooter();
@@ -548,11 +592,11 @@ namespace SmilyVolley
             return current switch
             {
                 Screen.Options =>
-                    "↑ ↓ : naviguer   —   ← → : régler   —   Entrée : valider   —   Échap : retour",
+                    "↑ ↓ molette : naviguer   —   ← → + − : régler   —   Entrée : valider   —   Échap : retour",
                 Screen.Pause =>
-                    "↑ ↓ : naviguer   —   Entrée : valider   —   Échap : reprendre",
+                    "↑ ↓ molette : naviguer   —   Entrée : valider   —   Échap : reprendre",
                 _ =>
-                    "↑ ↓ : naviguer   —   Entrée : valider",
+                    "↑ ↓ molette : naviguer   —   Entrée : valider",
             };
         }
     }
