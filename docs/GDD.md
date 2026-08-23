@@ -63,7 +63,7 @@ Conséquences de design, toutes voulues :
 
 | Situation | Résultat |
 |---|---|
-| Balle au-dessus du centre | Renvoi vertical, sans danger |
+| Balle au-dessus du centre | Renvoi quasi vertical, sans danger |
 | Balle sur le flanc du blob | Renvoi rasant, dirigé vers ce flanc |
 | Blob qui percute la balle par-dessus en retombant | **Smash** : la balle repart vers le bas |
 | Blob qui monte sous la balle | Chandelle haute, gain de temps |
@@ -74,6 +74,29 @@ de quelques dizaines de centimètres et place la balle.
 
 Une part de la vitesse du blob est ajoutée au renvoi (32 %), ce qui récompense le
 mouvement au moment de l'impact sans jamais dominer la composante radiale.
+
+#### L'angle minimal de renvoi
+
+La vitesse de renvoi étant **imposée** et non conservée, rien ne s'amortit d'une frappe
+à l'autre. Le renvoi radial possède donc un point fixe : une balle qui retombe
+exactement sur le sommet d'un blob immobile repart exactement à la verticale, retombe
+au même endroit, et repart à l'identique — indéfiniment.
+
+Ce n'était pas un cas limite théorique : le service posait la balle pile au-dessus du
+blob, l'égalité était donc exacte, et un joueur qui ne touchait à rien voyait la balle
+osciller sans fin. Mesuré : **50 s sans qu'un seul point ne soit marqué.**
+
+Deux garde-fous, complémentaires :
+
+| Mesure | Rôle |
+|---|---|
+| **Service décalé de 0,4 unité vers le filet** | Le cas nominal n'atteint plus l'équilibre : la balle attaque le flanc du blob et repart d'elle-même à ~17° |
+| **Angle minimal de 12° avec la verticale** | Filet de sécurité : aucun réglage ne peut recréer la boucle, où qu'elle survienne dans l'échange |
+
+L'inclinaison conserve le côté déjà pris par la balle et ne tranche vers le camp adverse
+que sur une frappe rigoureusement centrée. À 12°, la composante verticale vaut encore
+98 % de la vitesse de renvoi : les chandelles restent hautes. Le smash n'est jamais
+concerné, puisqu'il renvoie la balle vers le bas.
 
 ### 2.2 Le contrôle sec
 
@@ -161,7 +184,8 @@ c'est délibéré : en rally point, laisser le service au gagnant crée des sér
 > score de monter.
 
 La balle rejoint sa position d'engagement — 3,6 unités au-dessus de la **position de
-départ** du blob serveur — dès l'attribution du point, et non à la fin de la pause.
+départ** du blob serveur, décalée de 0,4 unité vers le filet — dès l'attribution du
+point, et non à la fin de la pause.
 Elle y reste immobile pendant toute la pause (1,8 s), puis pendant le délai de service
 (1,1 s), avant d'être lâchée sans vitesse initiale. Les deux blobs sont replacés à leur
 position de départ au début du service.
@@ -278,6 +302,7 @@ le blob retombe avant elle, ce qui rend le smash atteignable.
 | Échelle de gravité | 1,5 (≈ 14,7 u/s²) | Trajectoires tendues, peu de flottement |
 | Rebond (murs, filet, sol) | 0,92 | Presque élastique : les échanges ne s'éteignent pas |
 | Délai de re-frappe | 0,05 s | Évite que la balle se colle à un blob qui monte |
+| Angle minimal / verticale | 12° | Interdit l'aller-retour vertical sans fin (§ 2.1) |
 
 La rotation de la balle est purement décorative (−28°/unité parcourue) : elle donne un
 repère de vitesse sans influencer la trajectoire.
@@ -477,7 +502,9 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 | `GameManager` | `Side Out Scoring` | Comptage historique : seul le serveur marque |
 | `GameManager` | `Serve Goes To Loser` | Décoché : le gagnant du point engage |
 | `GameManager` | `Serve Delay`, `Point Pause` | Rythme entre les échanges |
+| `GameManager` | `Serve Offset X` | Décalage de la balle vers le filet au service ; 0 = pile au-dessus du blob |
 | `Ball` | `Hit Speed`, `Blob Velocity Influence` | Nervosité des échanges |
+| `Ball` | `Min Vertical Angle` | Écart minimal du renvoi avec la verticale ; 0 = échanges bloquables |
 | `Ball` *(Rigidbody2D)* | `Gravity Scale` | Balle flottante ou lourde |
 | `BlobLeft` / `BlobRight` | `Move Speed`, `Jump Speed`, `Gravity` | Sensation de déplacement |
 | `BlobRight` *(AiBlobInput)* | `Aim Offset`, `Jump Reach` | Style de jeu de l'IA |
@@ -522,7 +549,7 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 |---|---|---|
 | Échange qui s'éternise sans limite de touches | Partie qui traîne | La règle des 3 touches est codée, activable en un champ |
 | IA à difficulté 1 imbattable | Frustration | Défaut à 0,65 ; à exposer dans un menu de difficulté |
-| Balle qui rebondit indéfiniment sur un blob ou sur le filet | **Observé** : sans joueur pour la reprendre, la balle peut osciller verticalement plus de 40 s sans jamais toucher le sol — le match se bloque | À traiter : impulsion latérale au service, et angle minimal de renvoi quand la balle repart quasi verticale |
+| ~~Balle qui rebondit indéfiniment sur un blob~~ | ~~Le match se bloque~~ | **Résolu** : service décalé de 0,4 unité et angle minimal de 12° (§ 2.1). Mesuré sur le jeu livré à lui-même : 0 point en 50 s avant, 7 après |
 | Sprites générés par code | Aspect provisoire | Assumé ; remplaçables sans toucher au code |
 | Dispositions clavier exotiques | Aide à l'écran trompeuse | `LabelOf` lit la disposition système, pas de valeur en dur |
 

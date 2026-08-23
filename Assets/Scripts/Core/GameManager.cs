@@ -43,6 +43,9 @@ namespace SmilyVolley
         [Header("Service")]
         public float groundY = -4f;
         public float serveHeight = 3.6f;
+        [Tooltip("Décalage de la balle vers le filet au service. À zéro, elle tombe pile sur " +
+                 "le sommet du blob et n'en repart qu'à la verticale.")]
+        public float serveOffsetX = 0.4f;
         public float serveDelay = 1.1f;
         public float pointPause = 1.8f;
 
@@ -216,6 +219,12 @@ namespace SmilyVolley
 
             BlobController serving = server == Side.Left ? leftBlob : rightBlob;
             float x = serving != null ? serving.StartPosition.x : 0f;
+
+            // Décalée vers le filet plutôt que pile au-dessus du blob : la balle attaque
+            // alors le flanc du blob et repart naturellement en biais, sans dépendre du
+            // garde-fou de BallController.
+            x -= serveOffsetX * server.Sign();
+
             ball.Freeze(new Vector2(x, groundY + serveHeight));
         }
 

@@ -21,6 +21,9 @@ namespace SmilyVolley
         public float maxSpeed = 20f;
         [Tooltip("Délai avant de pouvoir ré-appliquer une frappe pendant un contact continu.")]
         public float stickyRehitDelay = 0.05f;
+        [Tooltip("Angle minimal entre le renvoi et la verticale, en degrés. À zéro, une balle " +
+                 "retombant pile sur le sommet d'un blob immobile rebondit indéfiniment.")]
+        [Range(0f, 45f)] public float minVerticalAngle = 12f;
 
         [Header("Rendu")]
         public Transform visual;
@@ -179,11 +182,38 @@ namespace SmilyVolley
             Vector2 direction = body.position - blob.Center;
             if (direction.sqrMagnitude < 0.0001f) direction = Vector2.up;
             direction.Normalize();
+            direction = TiltAwayFromVertical(direction, blob);
 
             Vector2 velocity = direction * hitSpeed + blob.Velocity * blobVelocityInfluence;
             body.linearVelocity = Vector2.ClampMagnitude(velocity, maxSpeed);
 
             if (countAsTouch) BlobHit?.Invoke(blob);
+        }
+
+        /// <summary>
+        /// Écarte le renvoi de la verticale d'au moins <see cref="minVerticalAngle"/>.
+        ///
+        /// Le renvoi radial à vitesse constante crée un point fixe : une balle qui retombe
+        /// exactement sur le sommet d'un blob immobile repart exactement à la verticale,
+        /// retombe au même endroit, et repart à l'identique. Rien ne s'amortit puisque la
+        /// vitesse de renvoi est imposée, pas conservée — l'échange se fige donc pour de
+        /// bon. Ce n'est pas un cas limite : au service, la balle est lâchée pile au-dessus
+        /// du blob, et l'égalité est exacte.
+        ///
+        /// L'inclinaison conserve le côté déjà pris par la balle et ne tranche vers le camp
+        /// adverse que sur une frappe rigoureusement centrée. Les chandelles restent hautes :
+        /// à 12°, la composante verticale vaut encore 98 % de la vitesse de renvoi.
+        /// </summary>
+        Vector2 TiltAwayFromVertical(Vector2 direction, BlobController blob)
+        {
+            // Une balle renvoyée vers le bas (smash) retrouve le sol : aucun blocage possible.
+            if (minVerticalAngle <= 0f || direction.y <= 0f) return direction;
+
+            float minHorizontal = Mathf.Sin(minVerticalAngle * Mathf.Deg2Rad);
+            if (Mathf.Abs(direction.x) >= minHorizontal) return direction;
+
+            float sign = direction.x != 0f ? Mathf.Sign(direction.x) : -blob.side.Sign();
+            return new Vector2(sign * minHorizontal, Mathf.Cos(minVerticalAngle * Mathf.Deg2Rad));
         }
     }
 }

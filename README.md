@@ -70,6 +70,16 @@ Le contrôle « sec » de Blobby Volley vient de deux choix :
 Les rebonds sur les murs, le filet et le sol restent gérés par la physique 2D
 (`Assets/Art/Bouncy.physicsMaterial2D` et `Sand.physicsMaterial2D`).
 
+> **Pourquoi un angle minimal de renvoi.** La vitesse de renvoi est imposée, pas
+> conservée : rien ne s'amortit d'une frappe à l'autre. Une balle qui retombe pile sur le
+> sommet d'un blob immobile repart donc exactement à la verticale, retombe au même
+> endroit et repart à l'identique — sans fin. Le service posait précisément la balle
+> au-dessus du blob, ce qui rendait l'égalité exacte : un joueur qui ne touchait à rien
+> bloquait le match. Deux garde-fous : le service est décalé de 0,4 unité vers le filet
+> (`Serve Offset X`), et tout renvoi vers le haut est écarté d'au moins 12° de la
+> verticale (`Min Vertical Angle`). Les chandelles restent hautes — à 12°, la composante
+> verticale vaut encore 98 % — et le smash, qui renvoie vers le bas, n'est pas concerné.
+
 Deux murs invisibles évitent les temps morts :
 
 - `ScreenCeiling` colle un collider sur le bord **haut** du champ visible et le repositionne
@@ -149,7 +159,9 @@ la porte ouverte aux effets d'éclairage 2D (halo sur la balle, ombres portées,
 | `GameManager` | `Points To Win` | Longueur du match |
 | `GameManager` | `Max Touches Per Side` | 0 = illimité ; 3 = règle volley classique |
 | `GameManager` | `Serve Goes To Loser` | Décoché : le gagnant du point engage |
+| `GameManager` | `Serve Offset X` | Décalage de la balle vers le filet au service |
 | `Ball` | `Hit Speed`, `Blob Velocity Influence` | Nervosité des échanges |
+| `Ball` | `Min Vertical Angle` | Écart minimal du renvoi avec la verticale (0 = échanges bloquables) |
 | `Ball` (Rigidbody2D) | `Gravity Scale` | Balle flottante ou lourde |
 | `BlobLeft` / `BlobRight` | `Move Speed`, `Jump Speed`, `Gravity` | Sensation de déplacement |
 
