@@ -202,13 +202,24 @@ namespace SmilyVolley
         {
             lastHitTime = Time.time;
 
+            // Relevée avant le renvoi : c'est la vitesse d'arrivée qui creuse la gelée,
+            // pas celle du départ, qui est constante et ne dirait rien de la force du coup.
+            float incoming = body.linearVelocity.magnitude;
+
             Vector2 direction = body.position - blob.Center;
             if (direction.sqrMagnitude < 0.0001f) direction = Vector2.up;
             direction.Normalize();
+
+            // Le creux se forme là où la balle touche, avant que le renvoi ne soit écarté
+            // de la verticale : la correction sert à la trajectoire, pas au point de contact.
+            Vector2 contact = direction;
+
             direction = TiltAwayFromVertical(direction, blob);
 
             Vector2 velocity = direction * hitSpeed + blob.Velocity * blobVelocityInfluence;
             body.linearVelocity = Vector2.ClampMagnitude(velocity, maxSpeed);
+
+            blob.ReportBallImpact(contact, incoming);
 
             if (countAsTouch) BlobHit?.Invoke(blob);
         }

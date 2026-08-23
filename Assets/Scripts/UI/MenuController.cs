@@ -79,7 +79,7 @@ namespace SmilyVolley
             { "Tranquille", "Facile", "Normale", "Redoutable", "Implacable" };
         static readonly int[] PointOptions = { 5, 7, 11, 15, 21 };
         // Dans l'ordre de l'énumération BlobStyle.
-        static readonly string[] BlobStyleNames = { "Rond", "Mou", "Anguleux" };
+        static readonly string[] BlobStyleNames = { "Ferme", "Molle", "Moulée" };
 
         readonly List<Entry> entries = new List<Entry>(32);
         readonly GameSettings settings = new GameSettings();

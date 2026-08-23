@@ -303,7 +303,7 @@ dans l'Inspector.
 | Vitesse de déplacement | 6,5 u/s | Traverse son demi-terrain en ~1,1 s |
 | Vitesse de saut | 9,7 u/s | Apex à ~3,0 unités, soit le haut du filet |
 | Gravité | 15,7 u/s² | Chute plus vive que la montée : saut « lourd », lisible |
-| Récupération d'écrasement | 5 /s | Squash & stretch court, sans mollesse |
+| Retour de la gelée au repos | ressort, raideur 210, amortissement 7 | Écrasement court, avec un dépassement lisible |
 
 La gravité du blob (15,7) est volontairement plus forte que celle de la balle (14,7) :
 le blob retombe avant elle, ce qui rend le smash atteignable.
@@ -479,62 +479,103 @@ Toute la lisibilité repose sur le contraste de teinte entre les deux camps.
 Les visages — deux yeux, un sourire — n'ont aucune fonction mécanique. Ils donnent au
 jeu son nom et sa bonne humeur.
 
-**État actuel** : tous les sprites sont **générés par code** (`PlaceholderArt` et
-`BlobSheetArt`), sans aucun asset externe. Le projet se clone et se lance sans
+**État actuel** : tout l'art est **généré par code** (`PlaceholderArt` et `BlobArt`),
+sans aucun asset externe. Le projet se clone et se lance sans
 dépendance. Ils sont pensés pour être remplacés : il suffit d'écraser les PNG de
 `Assets/Art`.
 
-### 10.1 Les blobs : trois gelées au choix
+### 10.1 Les blobs : une gelée simulée, pas une image
 
-Trois planches de sprites, une par style, chacune de **9 colonnes × 2 lignes** : la
-colonne est l'état de déformation, du plus aplati au plus étiré ; la ligne est le
-joueur, vert en haut, orange en bas. Une planche par style tient en un fichier — c'est
-ce qui permet de les comparer d'un coup d'œil.
+Le blob n'est pas un sprite déformé. Son contour est un **anneau de 41 points reliés par
+des ressorts**, intégré à pas fixe et rendu dans un maillage reconstruit à chaque image
+(`BlobJelly`). Trois forces agissent sur chaque point :
 
-| Style | Profil | Ce qu'il évoque |
-|---|---|---|
-| **Rond** | Dôme ferme, déformation quasi uniforme | La gelée d'origine, la plus sobre |
-| **Mou** | Les flancs gonflent à l'écrasement, se creusent à l'étirement ; reflet mouillé | Une gelée liquide, presque une goutte |
-| **Anguleux** | Dix facettes planes, une valeur de gris par face | Une gelée moulée, ferme et taillée |
-
-**Les images ne sont pas des mises à l'échelle.** Chacune est redessinée à partir d'un
-profil radial propre au style : `BoundaryRadius(angle, écrasement, style)` donne le
-rayon du contour, et c'est cette fonction — elle seule — qui distingue les trois. Un
-simple `localScale` ne saurait faire gonfler un flanc ni aplatir une facette.
-
-Le visage est dessiné dans l'espace du dôme unité, avant la transformation
-d'écrasement : il se déforme donc avec le corps, sans une ligne de code de plus.
-
-### 10.2 Le ballottement
-
-La déformation ne revient plus au repos en ligne droite mais par un **ressort amorti** :
-
-```
-accélération = (1 − écrasement) × raideur − vitesse × amortissement
-```
-
-Avec une raideur de 180 et un amortissement de 14, le rapport d'amortissement vaut
-0,52 : le blob **dépasse le repos** puis oscille une ou deux fois avant de se poser.
-C'est ce dépassement qui fait lire la gelée — un retour linéaire ne donne que du
-caoutchouc. Mesuré à l'atterrissage, en pixels à l'écran :
-
-| Moment | Largeur × hauteur |
+| Force | Effet |
 |---|---|
-| Repos | 139 × 70 |
-| Impact | 177 × 55 — étalé et aplati |
-| Remontée | 167 × 59, puis 153 × 65, puis 143 × 69 |
-| **Dépassement** | **136 × 72 — plus étroit et plus haut qu'au repos** |
-| Retour | 139 × 71, puis 139 × 70 |
+| **Mémoire de forme** | Rappel vers la place au repos — c'est ce qui redonne sa silhouette au blob |
+| **Couplage** | Rappel vers le milieu des deux voisins — c'est ce qui fait **voyager** une bosse le long du contour |
+| **Pression** | L'aire du polygone est conservée — le flanc gonfle exactement de ce que le sommet perd |
 
-Neuf images pour couvrir un écrasement de 0,72 à 1,28, soit un pas de 7 % : assez
-grossier pour se voir. `BlobAnimator` choisit l'image la plus proche puis applique le
-**résidu** en échelle — 3,5 % au pire, invisible comme distorsion. L'image donne la
-forme, le résidu donne la quantité exacte.
+**Pourquoi une simulation plutôt qu'un jeu d'images.** Une planche de sprites ne décrit
+qu'une déformation globale, la même partout, indexée par un seul nombre. Une gelée se
+déforme **localement** : la balle creuse un creux là où elle frappe et nulle part
+ailleurs, l'atterrissage écrase par le haut et pousse les côtés, un départ latéral
+laisse le sommet en arrière. Ces formes dépendent de l'endroit, de la direction et de la
+force du choc — il en faudrait une infinité pour les tabuler.
+
+Les quatre sources de déformation :
+
+| Événement | Impulsion |
+|---|---|
+| Atterrissage | Vers le bas, proportionnelle à la vitesse de chute, pondérée par la hauteur : le pied s'arrête, le sommet continue |
+| Appui du saut | Vers le haut, même pondération : le blob s'étire avant de partir |
+| Balle frappée | Le long du contact, pondérée par le cube du produit scalaire : un creux serré, du bon côté |
+| Démarrage / arrêt | Latérale, égale à la variation de vitesse du blob : le sommet garde l'ancienne vitesse un instant |
+
+**La peau.** Couleur, ombrage et visage sont une texture dessinée dans l'espace du corps
+au repos, une tuile par style, un fichier par joueur. Les UV du maillage sont figées sur
+cette forme de repos : **le sourire se déforme donc avec le corps**, sans une ligne de
+code de plus. Le maillage déborde du contour d'une jupe de 0,08 unité, où l'alpha de la
+texture s'éteint — c'est ce qui garde un bord lisse quelle que soit la déformation.
+
+### 10.2 Les trois gelées
+
+Le style ne change ni la taille du corps ni la physique du jeu. Il change le **contour au
+repos** et les **réglages du ressort** : la différence se lit surtout en mouvement.
+
+| Style | Contour | Raideur | Amortissement | Ce qu'il évoque |
+|---|---|---|---|---|
+| **Ferme** | Arc rond | 210 | 7 | La gelée d'origine, la plus sobre |
+| **Molle** | Arc rond, reflet mouillé | 115 | 2,6 | Une gelée liquide qui s'étale et ballotte |
+| **Moulée** | Dix faces planes | 640 | 15 | Une gelée moulée, ferme et taillée |
+
+Amplitude mesurée sur le jeu compilé, largeur × hauteur du blob en pixels, sur 280 images
+d'un même échange :
+
+| Style | Repos | Hauteur | Largeur |
+|---|---|---|---|
+| **Ferme** | 137 × 69 | 49 … 77 | 124 … 178 |
+| **Molle** | 137 × 69 | 44 … 85 | 113 … 206 |
+| **Moulée** | 137 × 65 | 57 … 71 | 128 … 144 |
+
+La moulée bouge à peine, la molle s'écrase presque à plat : c'est la mécanique qui
+sépare les styles, pas le dessin.
+
+### 10.3 Garder le contour honnête
+
+Une simulation de contour a deux façons de mal tourner, toutes deux constatées avant
+d'être corrigées :
+
+**Le froissement.** La pression pousse le long de normales calculées sur le contour
+déformé. Si le contour se hérisse, ces normales partent dans tous les sens et la
+pression creuse le pli qui vient de naître : en quelques images le blob n'est plus qu'un
+oursin. Deux garde-fous suffisent — un **frottement entre voisins**, qui éteint le
+froissement sans toucher au ballottement d'ensemble, et un **plafond sur l'écart d'aire**
+au-delà duquel la pression cesse de croître.
+
+**Le nœud.** Sous un grand écrasement, deux points voisins de la base se croisent : le
+polygone se noue et un coin du corps disparaît. Trois contraintes après intégration —
+base tenue ordonnée de gauche à droite, arête interdite de s'étirer au-delà de 2,2 fois
+sa longueur au repos, point interdit de s'éloigner de plus de 0,7 unité de sa place au
+repos — coûtent moins qu'un modèle de contact et suffisent : le nœud n'a jamais le temps
+de se former. La dernière compte double, car elle borne la déformation elle-même : un
+smash reçu en l'air, où la base n'est plus tenue par le sol, pliait sinon le corps en
+crochet.
+
+Le pas d'intégration est fixe, à 1/360 s : la plus raide des trois gelées deviendrait
+instable si le pas suivait la fréquence d'affichage.
 
 **Éclairage** : le Renderer 2D d'URP applique aux sprites le matériau `Sprite-Lit-Default`.
 Sans lumière dans la scène, tous les sprites seraient rendus **noirs**. Une `Light2D`
 globale blanche d'intensité 1 reproduit l'aspect non éclairé, tout en laissant la porte
 ouverte à l'éclairage 2D (halo sur la balle, ambiance de fin de journée).
+
+> **Piège de rendu.** Le corps du blob n'est pas un sprite mais un `MeshRenderer` : il
+> porte un matériau `Universal Render Pipeline/Unlit`, transparent et sans tri de faces.
+> Non éclairé, il ignore la `Light2D` globale — ce qui donne exactement l'aspect voulu.
+> Le tri de faces est désactivé parce que le maillage se retourne localement quand la
+> gelée se creuse : une face arrière disparaîtrait. Tout est réglé dans
+> `BlobArt.BuildMaterial`.
 
 **Particules** : trois bouffées, une par nature d'impact, émises au point de contact
 exact. Elles sont le retour immédiat qui manquait : avant elles, une frappe et un
@@ -626,8 +667,8 @@ SmilyVolley (assembly runtime)
 │   ├── GameSettings     Réglages du joueur et leur persistance
 │   └── Side             Camp du terrain (la valeur enum est le signe sur X)
 ├── Gameplay/
-│   ├── BlobAnimator     Choix de l'image selon la déformation
-│   ├── BlobController   Déplacement manuel, saut, butées, écrasement
+│   ├── BlobJelly        Gelée simulée : anneau de ressorts et maillage déformable
+│   ├── BlobController   Déplacement manuel, saut, butées
 │   ├── BlobInput        Abstraction des commandes (clavier ou IA)
 │   ├── HumanBlobInput   Clavier via Input System
 │   ├── AiBlobInput      Prédiction balistique et placement
@@ -645,7 +686,7 @@ SmilyVolley (assembly runtime)
 
 SmilyVolley.Editor (assembly éditeur, exclu du build)
 ├── SceneBuilder         Assemble la scène complète
-├── BlobSheetArt         Dessine les trois planches de blobs
+├── BlobArt              Dessine la peau des blobs et ses matériaux
 ├── PlaceholderArt       Dessine les PNG
 ├── RenderPipelineSetup  Active URP sur tous les niveaux de qualité
 └── BuildTools           Build Windows et réglages projet
@@ -678,7 +719,8 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 |---|---|
 | `OnCollisionStay2D` | La nature de chaque collider (blob / sol) est résolue une fois puis mémorisée, au lieu d'un `GetComponentInParent` à chaque pas de physique |
 | Lecture du clavier | Les `KeyControl` sont résolus au changement de périphérique, pas à chaque image |
-| Écritures de `Transform` | Ombres, cadrage caméra, plafond et écrasement n'écrivent que sur changement réel |
+| Écritures de `Transform` | Ombres, cadrage caméra et plafond n'écrivent que sur changement réel |
+| Gelée | 41 points et 287 sommets par blob, tableaux alloués une fois : la simulation et le maillage ne produisent aucun déchet par image |
 | Allocations | Aucune allocation par image : tampon de liste réutilisé, table de chaînes pour le score |
 | Boucles inutiles | Le HUD se désactive lui-même hors message temporisé |
 
@@ -701,7 +743,8 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 | `Ball` | `Min Vertical Angle` | Écart minimal du renvoi avec la verticale ; 0 = échanges bloquables |
 | `Ball` *(Rigidbody2D)* | `Gravity Scale` | Balle flottante ou lourde |
 | `BlobLeft` / `BlobRight` | `Move Speed`, `Jump Speed`, `Gravity` | Sensation de déplacement |
-| `BlobLeft` / `BlobRight` | `Squash Stiffness`, `Squash Damping` | Fermeté et durée du ballottement |
+| `Visual` *(BlobJelly)* | `Shape Stiffness`, `Damping` par style | Fermeté et durée du ballottement |
+| `Visual` *(BlobJelly)* | `Land Gain`, `Jump Gain`, `Ball Gain`, `Inertia` | Ampleur de chaque source de déformation |
 | `BlobRight` *(AiBlobInput)* | `Aim Offset`, `Jump Reach` | Style de jeu de l'IA |
 | `Audio` *(GameAudio)* | Volumes par événement | Équilibre du mixage |
 | `Audio` *(GameAudio)* | `Pitch Jitter` | Variation de hauteur ; 0 = répétition mécanique |
@@ -730,7 +773,7 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 - **Effet sur la balle** : la vitesse tangentielle du blob induirait une rotation qui
   courberait la trajectoire. C'est l'ajout le plus riche possible sans nouvelle touche.
 - **Écran de fin de match** avec statistiques : plus long échange, smashs réussis.
-- **Sprites définitifs** en remplacement des planches générées, et animation de repos
+- **Sprites définitifs** en remplacement des textures générées, et animation de repos
   (respiration) qui manque encore : la gelée ne bouge aujourd'hui que sous l'effet des
   sauts et des impacts.
 
@@ -770,7 +813,8 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 | **Rally / échange** | Phase où la balle est en jeu entre le service et le point |
 | **Rally point** | Comptage où chaque échange donne un point, quel que soit le serveur |
 | **Side out** | Comptage historique où seul le camp au service peut marquer |
-| **Squash & stretch** | Déformation du sprite à l'impulsion et à l'atterrissage |
+| **Squash & stretch** | Déformation du corps à l'impulsion et à l'atterrissage |
+| **Corps mou** | Contour simulé par un anneau de points reliés par des ressorts, avec conservation de l'aire |
 | **Chandelle** | Renvoi très haut, joué pour gagner du temps de replacement |
 | **CC0** | Renonciation au droit d'auteur : usage libre, y compris commercial, sans attribution |
 | **Bouffée** | Émission ponctuelle de particules déclenchée par un impact |

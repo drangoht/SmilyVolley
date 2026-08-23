@@ -151,26 +151,40 @@ répétition à l'identique que l'oreille repère, pas le son. Sans cette variat
 > ZWrite, mot-clé et file de rendu se règlent à la main dans
 > `SceneBuilder.CreateParticleMaterial`.
 
-## Les blobs : trois gelées au choix
+## Les blobs : une gelée simulée
 
-Trois planches de sprites, une par style, générées par code comme le reste de l'art.
-Chacune fait **9 colonnes × 2 lignes** : la colonne est l'état de déformation, du plus
-aplati au plus étiré, la ligne est le joueur — vert en haut, orange en bas.
+Le blob n'est pas un sprite. Son contour est un anneau de **41 points reliés par des
+ressorts**, intégré à pas fixe et rendu dans un maillage reconstruit à chaque image
+(`BlobJelly`). Trois forces le font vivre :
 
-| Style | Profil |
+| Force | Rôle |
 |---|---|
-| **Rond** | Dôme ferme, déformation quasi uniforme |
-| **Mou** | Les flancs gonflent à l'écrasement et se creusent à l'étirement, reflet mouillé |
-| **Anguleux** | Dix facettes planes, une valeur par face — une gelée moulée |
+| **Mémoire de forme** | Chaque point est rappelé vers sa place au repos |
+| **Couplage** | Chaque point est tiré vers le milieu de ses voisins : la bosse voyage le long du contour |
+| **Pression** | L'aire est conservée : le flanc gonfle de ce que le sommet perd |
 
-Les images ne sont pas des mises à l'échelle : chacune est redessinée depuis un profil
-radial propre au style. Un `localScale` ne saurait faire gonfler un flanc ni aplatir
-une facette.
+C'est ce qui distingue une gelée d'un sprite mis à l'échelle : la déformation est
+**locale**. La balle creuse un vrai creux là où elle touche, l'atterrissage écrase par
+le haut et fait déborder les côtés, un départ latéral laisse le sommet en arrière. Ces
+formes dépendent de l'endroit et de la force du choc — aucun jeu d'images ne les contient.
 
-Le retour au repos passe par un **ressort amorti**, pas par une interpolation linéaire :
-le blob dépasse le repos puis oscille une ou deux fois. C'est ce dépassement qui fait
-lire la gelée. `Squash Stiffness` et `Squash Damping` sur les blobs règlent la fermeté
-et la durée du ballottement.
+La peau — couleur, ombrage, visage — est une texture dessinée dans l'espace du corps au
+repos. Les UV du maillage étant figées sur cette forme, **le sourire se déforme avec le
+corps** sans une ligne de code de plus.
+
+### Les trois gelées
+
+Le style ne change ni la taille du corps ni la physique du jeu : il change le contour au
+repos et les réglages du ressort. La différence se voit donc surtout en mouvement.
+
+| Style | Contour | Comportement | Largeur × hauteur mesurées en jeu |
+|---|---|---|---|
+| **Ferme** | Arc rond | Revient vite, déborde un peu | 124…178 × 49…77 |
+| **Molle** | Arc rond, reflet mouillé | S'étale, ballotte longtemps | 113…206 × 44…85 |
+| **Moulée** | Dix faces planes | Très raide, les arêtes se redressent aussitôt | 128…144 × 57…71 |
+
+Le blob mesure 137 × 69 pixels au repos : la molle s'écrase à la moitié de sa hauteur et
+s'étale d'une fois et demie, la moulée bouge à peine.
 
 Le style se change dans les options, en cours de partie, et se garde d'une fois sur
 l'autre.
@@ -179,20 +193,20 @@ l'autre.
 
 ```
 Assets/
-├── Art/                 Sprites et planches générés par code + matériaux physiques
+├── Art/                 Sprites et peaux générés par code + matériaux
 ├── Audio/Kenney/        Effets CC0 + licence et provenance
 ├── Audio/Music/         Musique CC0 + licence et provenance
 ├── Settings/            Pipeline URP, Renderer 2D, volume profile par défaut
 ├── Editor/              → assembly SmilyVolley.Editor (exclue du build)
 │   ├── PlaceholderArt.cs      Dessine les PNG (balle, filet, ciel, ombre, particule)
-│   ├── BlobSheetArt.cs        Dessine les trois planches de blobs
+│   ├── BlobArt.cs             Dessine la peau des blobs et ses matériaux
 │   ├── SceneBuilder.cs        Assemble toute la scène de jeu
 │   ├── RenderPipelineSetup.cs Active URP sur tous les niveaux de qualité
 │   └── BuildTools.cs          Build Windows + réglages projet
 ├── Scenes/Game.unity
 └── Scripts/             → assembly SmilyVolley
     ├── Core/            GameManager, GameSettings, BlobStyle, CameraFitter, Side
-    ├── Gameplay/        BlobController, BlobAnimator, BallController, IA, entrées, particules
+    ├── Gameplay/        BlobController, BlobJelly, BallController, IA, entrées, particules
     ├── Audio/           GameAudio
     └── UI/              HudController, MenuController, MenuRow
 docs/
@@ -208,8 +222,8 @@ la recompilation du jeu.
 - **Construire la scène de jeu** — régénère `Game.unity` de zéro (toute modification manuelle
   de la scène est perdue). Les dimensions du terrain sont les constantes en tête de `SceneBuilder`.
 - **Régénérer les sprites** — redessine les PNG de `Assets/Art`.
-- **Régénérer les planches de blobs** — redessine les trois planches et les redécoupe
-  en sprites.
+- **Régénérer la peau des blobs** — redessine les deux textures (une par joueur, une
+  tuile par style) et reconfigure leurs matériaux.
 - **Compiler le build Windows** — produit `Build/Windows/SmilyVolley.exe`.
 - **Activer le pipeline URP** — réassigne `Assets/Settings/UniversalRP.asset` sur tous les
   niveaux de qualité. Unity range le pipeline actif dans `QualitySettings` niveau par niveau :
@@ -243,6 +257,10 @@ dans la scène, tous les sprites seraient noirs**. `SceneBuilder` place donc une
 globale blanche d'intensité 1, qui reproduit exactement l'aspect non éclairé tout en laissant
 la porte ouverte aux effets d'éclairage 2D (halo sur la balle, ombres portées, ambiance).
 
+Le corps des blobs échappe à cette règle : c'est un `MeshRenderer` portant un matériau
+`Universal Render Pipeline/Unlit` transparent, **sans tri de faces** — le maillage se
+retourne localement quand la gelée se creuse, et une face arrière disparaîtrait.
+
 ## Réglages utiles (Inspector)
 
 | Objet | Champ | Effet |
@@ -257,6 +275,8 @@ la porte ouverte aux effets d'éclairage 2D (halo sur la balle, ombres portées,
 | `Ball` | `Min Vertical Angle` | Écart minimal du renvoi avec la verticale (0 = échanges bloquables) |
 | `Ball` (Rigidbody2D) | `Gravity Scale` | Balle flottante ou lourde |
 | `BlobLeft` / `BlobRight` | `Move Speed`, `Jump Speed`, `Gravity` | Sensation de déplacement |
+| `Visual` *(BlobJelly)* | `Shape Stiffness`, `Damping` par style | Fermeté et durée du ballottement |
+| `Visual` *(BlobJelly)* | `Land Gain`, `Jump Gain`, `Ball Gain`, `Inertia` | Ampleur de chaque source de déformation |
 | `Audio` | Volumes par événement, `Pitch Jitter` | Équilibre et variété du mixage |
 | `Audio` | `Music Volume`, `Music Fade In Seconds` | Présence de la musique |
 | `Audio` | `Jump Volume`, `Jump Pitch` | Discrétion de l'appui du saut |
@@ -271,17 +291,18 @@ Le jeu est léger, mais le code évite les schémas qui coûtent cher dès qu'un
   `GetComponentInParent` remonterait la hiérarchie 50 fois par seconde et par contact.
 - Les `KeyControl` de l'Input System sont résolus au changement de périphérique, pas à
   chaque image.
-- Ombres, cadrage caméra, plafond et écrasement des blobs n'écrivent dans leur `Transform`
+- Ombres, cadrage caméra et plafond n'écrivent dans leur `Transform`
   que lorsque la valeur change réellement.
 - Aucune allocation par image : tampon de liste réutilisé pour la sélection des entrées,
-  table de chaînes pré-calculée pour le score.
+  table de chaînes pré-calculée pour le score. La gelée n'échappe pas à la règle — 41
+  points et 287 sommets par blob, tous les tableaux alloués une fois pour toutes.
 - Le HUD désactive sa propre boucle `Update` hors message temporisé.
 
 ## Pistes pour la suite
 
 - Menu principal, sélection de mode et écran d'options
 - Effet de rotation sur la balle influençant la trajectoire
-- Sprites définitifs en remplacement des planches générées, et animation de repos
+- Sprites définitifs en remplacement des textures générées, et animation de repos
 - Difficultés d'IA nommées, mode tournoi
 
 La feuille de route complète et les risques identifiés sont dans [docs/GDD.md](docs/GDD.md).

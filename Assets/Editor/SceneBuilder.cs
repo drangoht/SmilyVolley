@@ -55,7 +55,7 @@ namespace SmilyVolley.EditorTools
         public static void Build()
         {
             PlaceholderArt.GenerateAll();
-            BlobSheetArt.GenerateAll();
+            BlobArt.GenerateAll();
             ConfigureAudioImport();
 
             var bouncyWall = CreateMaterial("Bouncy", 0.92f);
@@ -66,8 +66,6 @@ namespace SmilyVolley.EditorTools
             Sprite net = LoadSprite("net.png");
             Sprite shadow = LoadSprite("shadow.png");
             Sprite ballSprite = LoadSprite("ball.png");
-            Sprite leftSprite = LoadSprite("blob_left.png");
-            Sprite rightSprite = LoadSprite("blob_right.png");
 
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -81,8 +79,8 @@ namespace SmilyVolley.EditorTools
             BuildNet(environment, net, bouncyWall);
 
             BallController ball = BuildBall(ballSprite, bouncyWall);
-            BlobController left = BuildBlob(Side.Left, leftSprite);
-            BlobController right = BuildBlob(Side.Right, rightSprite);
+            BlobController left = BuildBlob(Side.Left);
+            BlobController right = BuildBlob(Side.Right);
 
             var shadows = new GameObject("Shadows").transform;
             shadows.SetParent(environment, false);
@@ -269,7 +267,7 @@ namespace SmilyVolley.EditorTools
             return ball;
         }
 
-        static BlobController BuildBlob(Side side, Sprite sprite)
+        static BlobController BuildBlob(Side side)
         {
             var go = new GameObject(side == Side.Left ? "BlobLeft" : "BlobRight");
             go.transform.position = new Vector3(side.Sign() * BlobStartX, GroundY, 0f);
@@ -282,15 +280,12 @@ namespace SmilyVolley.EditorTools
             var collider = go.AddComponent<CircleCollider2D>();
             collider.radius = BlobRadius;
 
-            var visual = NewSprite("Visual", go.transform, sprite, Color.white, OrderBlob);
-
             var blob = go.AddComponent<BlobController>();
             blob.side = side;
             blob.groundY = GroundY;
             blob.radius = BlobRadius;
-            blob.visual = visual.transform;
 
-            AttachBlobAnimator(blob, visual.GetComponent<SpriteRenderer>(), side);
+            AttachJelly(blob, side);
 
             // Chaque blob est confiné à son camp : mur latéral d'un côté, filet de l'autre.
             float inner = NetHalfWidth + BlobRadius;
@@ -324,62 +319,40 @@ namespace SmilyVolley.EditorTools
         }
 
         /// <summary>
-        /// Branche les trois planches sur le blob. Le composant remplace l'écrasement
-        /// procédural du <see cref="BlobController"/> : les deux ensemble déformeraient
-        /// le blob deux fois.
+        /// Pose le corps du blob : un maillage déformable, pas un sprite.
+        ///
+        /// Le maillage est construit et animé à l'exécution par <see cref="BlobJelly"/>. La
+        /// scène n'a donc rien à enregistrer d'autre que le matériau — la peau du joueur, qui
+        /// porte les trois styles côte à côte — et le lien vers le blob, d'où viennent les chocs.
         /// </summary>
-        static void AttachBlobAnimator(BlobController blob, SpriteRenderer renderer, Side side)
+        static void AttachJelly(BlobController blob, Side side)
         {
-            var animator = blob.gameObject.AddComponent<BlobAnimator>();
-            animator.blob = blob;
-            animator.target = renderer;
-            animator.minSquash = BlobSheetArt.MinSquash;
-            animator.maxSquash = BlobSheetArt.MaxSquash;
+            var go = new GameObject("Visual");
+            go.transform.SetParent(blob.transform, false);
 
-            var all = (BlobStyle[])System.Enum.GetValues(typeof(BlobStyle));
-            animator.styles = new BlobAnimator.StyleFrames[all.Length];
+            go.AddComponent<MeshFilter>();
 
-            for (int i = 0; i < all.Length; i++)
-            {
-                animator.styles[i] = new BlobAnimator.StyleFrames
-                {
-                    style = all[i],
-                    frames = LoadBlobFrames(all[i], side),
-                };
-            }
+            var renderer = go.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = LoadBlobMaterial(side);
+            renderer.sortingOrder = OrderBlob;
 
-            blob.useProceduralSquash = false;
+            // Un maillage n'a pas les réglages d'un sprite : sans ces quatre lignes il
+            // demanderait ombres et sondes de lumière, inutiles dans une scène en deux dimensions.
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            renderer.lightProbeUsage = LightProbeUsage.Off;
+            renderer.reflectionProbeUsage = ReflectionProbeUsage.Off;
 
-            // Image de repos du style par défaut : sans elle la scène s'ouvrirait sur un
-            // blob vide, le temps que le premier LateUpdate choisisse une image.
-            Sprite[] round = animator.styles[0].frames;
-            if (round != null && round.Length > BlobSheetArt.FrameCount / 2)
-            {
-                renderer.sprite = round[BlobSheetArt.FrameCount / 2];
-            }
+            var jelly = go.AddComponent<BlobJelly>();
+            jelly.blob = blob;
         }
 
-        static Sprite[] LoadBlobFrames(BlobStyle style, Side side)
+        static Material LoadBlobMaterial(Side side)
         {
-            string path = BlobSheetArt.AssetPath(style);
-            var frames = new Sprite[BlobSheetArt.FrameCount];
-
-            foreach (Object asset in AssetDatabase.LoadAllAssetsAtPath(path))
-            {
-                if (asset is not Sprite sprite) continue;
-
-                for (int i = 0; i < frames.Length; i++)
-                {
-                    if (sprite.name == BlobSheetArt.SpriteName(style, side, i)) frames[i] = sprite;
-                }
-            }
-
-            for (int i = 0; i < frames.Length; i++)
-            {
-                if (frames[i] == null) Debug.LogError($"Image manquante : {BlobSheetArt.SpriteName(style, side, i)} dans {path}");
-            }
-
-            return frames;
+            string path = BlobArt.MaterialPath(side);
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null) Debug.LogError("Matériau de blob introuvable : " + path);
+            return material;
         }
 
         static AiBlobInput ConfigureAi(BlobController blob, BallController ball)

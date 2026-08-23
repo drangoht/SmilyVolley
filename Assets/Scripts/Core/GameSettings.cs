@@ -179,8 +179,9 @@ namespace SmilyVolley
         {
             if (blob == null) return;
 
-            var animator = blob.GetComponent<BlobAnimator>();
-            if (animator != null) animator.SetStyle(blobStyle);
+            // La gelée vit sur l'objet du rendu, enfant du blob.
+            var jelly = blob.GetComponentInChildren<BlobJelly>();
+            if (jelly != null) jelly.SetStyle(blobStyle);
         }
 
         static void ApplyControls(BlobController blob, Key left, Key right, Key jump)

@@ -23,6 +23,16 @@ namespace SmilyVolley
         /// <summary>Le blob vient de quitter le sol : position de l'appui.</summary>
         public event System.Action<Vector2> Jumped;
 
+        /// <summary>
+        /// La balle vient de frapper le blob : direction du centre vers la balle, et vitesse
+        /// d'arrivée. C'est ce que la gelée transforme en creux, du bon côté et à la bonne
+        /// profondeur — d'où la direction plutôt qu'un simple signal de contact.
+        /// </summary>
+        public event System.Action<Vector2, float> BallStruck;
+
+        /// <summary>Le blob vient d'être replacé pour un service : tout état visuel repart de zéro.</summary>
+        public event System.Action Respawned;
+
         [Header("Déplacement")]
         public float moveSpeed = 6.5f;
         public float jumpSpeed = 9.7f;
@@ -34,21 +44,6 @@ namespace SmilyVolley
         public float maxX = -1.15f;
         public float radius = 1f;
 
-        [Header("Rendu")]
-        [Tooltip("Transform du sprite, utilisé pour l'effet d'écrasement à l'atterrissage.")]
-        public Transform visual;
-        [Tooltip("Décoché quand un BlobAnimator prend la main : c'est alors lui qui porte la déformation.")]
-        public bool useProceduralSquash = true;
-        [Tooltip("Raideur du retour au repos. Plus c'est haut, plus la gelée est ferme.")]
-        public float squashStiffness = 180f;
-        [Tooltip("Amortissement. Bas = la gelée ballotte longtemps, haut = elle se fige aussitôt.")]
-        public float squashDamping = 14f;
-
-        // Bornes de la déformation. Elles correspondent aux images extrêmes des planches :
-        // sortir de cet intervalle demanderait une image qui n'existe pas.
-        public const float MinSquash = 0.72f;
-        public const float MaxSquash = 1.28f;
-
         // Tampon partagé : GetComponents<T>() alloue un tableau à chaque appel, la surcharge
         // à liste réutilise le même buffer. Le changement de mode passe par ici.
         static readonly List<BlobInput> InputBuffer = new List<BlobInput>(4);
@@ -59,21 +54,12 @@ namespace SmilyVolley
         Vector2 velocity;
         Vector2 startPosition;
         bool grounded = true;
-        float squash = 1f;
-        float squashVelocity;
-        float appliedSquash = float.NaN;
 
         /// <summary>Centre du cercle de collision : c'est le point de référence des rebonds de balle.</summary>
         public Vector2 Center => body != null ? body.position : (Vector2)cachedTransform.position;
 
         public Vector2 Velocity => velocity;
         public bool Grounded => grounded;
-
-        /// <summary>
-        /// Déformation courante : 1 au repos, moins d'un écrasé, plus d'un étiré.
-        /// C'est ce que lit le <c>BlobAnimator</c> pour choisir son image.
-        /// </summary>
-        public float Squash => squash;
 
         /// <summary>
         /// Position de départ du blob, celle qu'il retrouve à chaque service. C'est au-dessus
@@ -121,11 +107,10 @@ namespace SmilyVolley
         {
             velocity = Vector2.zero;
             grounded = true;
-            squash = 1f;
-            squashVelocity = 0f;
             cachedTransform.position = startPosition;
             if (body != null) body.position = startPosition;
             if (input != null) input.OnServeStart();
+            Respawned?.Invoke();
         }
 
         void FixedUpdate()
@@ -141,7 +126,6 @@ namespace SmilyVolley
                 {
                     velocity.y = jumpSpeed;
                     grounded = false;
-                    squash = 1.18f;
                     Jumped?.Invoke(new Vector2(body.position.x, groundY));
                 }
             }
@@ -157,7 +141,6 @@ namespace SmilyVolley
                 next.y = groundY;
                 if (!grounded)
                 {
-                    squash = 0.78f;
                     // Vitesse de chute avant remise à zéro : elle dose l'impact sonore et visuel.
                     Landed?.Invoke(new Vector2(next.x, groundY), Mathf.Abs(velocity.y));
                 }
@@ -169,26 +152,14 @@ namespace SmilyVolley
             body.MovePosition(next);
         }
 
-        void Update()
+        /// <summary>
+        /// Relaie la frappe de la balle. La <see cref="BallController"/> connaît la direction
+        /// et la vitesse du contact ; le blob ne les utilise pas lui-même, mais tout ce qui
+        /// l'habille — gelée, particules, son — s'y branche par cet événement.
+        /// </summary>
+        public void ReportBallImpact(Vector2 direction, float speed)
         {
-            float dt = Time.deltaTime;
-            if (dt <= 0f) return;
-
-            // Ressort amorti plutôt qu'un retour linéaire : c'est le dépassement au-delà
-            // du repos, puis l'oscillation qui s'éteint, qui font lire la gelée. Un
-            // MoveTowards s'arrête net à 1 et ne donne qu'un caoutchouc.
-            float acceleration = (1f - squash) * squashStiffness - squashVelocity * squashDamping;
-            squashVelocity += acceleration * dt;
-            squash = Mathf.Clamp(squash + squashVelocity * dt, MinSquash, MaxSquash);
-
-            if (!useProceduralSquash || visual == null) return;
-
-            // Le blob passe l'essentiel du match sans écrasement : réécrire la même échelle
-            // à chaque image marquerait le Transform sale pour rien.
-            if (squash == appliedSquash) return;
-
-            appliedSquash = squash;
-            visual.localScale = new Vector3(1f / squash, squash, 1f);
+            BallStruck?.Invoke(direction, speed);
         }
     }
 }

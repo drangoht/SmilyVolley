@@ -5,7 +5,7 @@ using UnityEngine;
 namespace SmilyVolley.EditorTools
 {
     /// <summary>
-    /// Génère les sprites provisoires du jeu (blobs, balle, ombre, filet, ciel).
+    /// Génère les sprites provisoires du jeu (balle, ombre, filet, ciel).
     /// Tout est dessiné par code : aucun asset externe à installer, et il suffit de remplacer
     /// les PNG produits dans Assets/Art pour passer à de vrais graphismes.
     /// </summary>
@@ -14,7 +14,7 @@ namespace SmilyVolley.EditorTools
         public const string ArtFolder = "Assets/Art";
         public const float PixelsPerUnit = 200f;
 
-        // Publiques : les planches de blobs (BlobSheetArt) reprennent exactement ces teintes.
+        // Publiques : la peau des blobs (BlobArt) reprend exactement ces teintes.
         public static readonly Color LeftBody = new Color(0.24f, 0.72f, 0.42f);
         public static readonly Color RightBody = new Color(0.93f, 0.44f, 0.31f);
         static readonly Color BallA = new Color(0.98f, 0.85f, 0.30f);
@@ -25,8 +25,6 @@ namespace SmilyVolley.EditorTools
         {
             Directory.CreateDirectory(ArtFolder);
 
-            Save(CreateBlob(LeftBody), "blob_left.png", new Vector2(0.5f, 0f), PixelsPerUnit);
-            Save(CreateBlob(RightBody), "blob_right.png", new Vector2(0.5f, 0f), PixelsPerUnit);
             Save(CreateBall(), "ball.png", new Vector2(0.5f, 0.5f), PixelsPerUnit);
             Save(CreateShadow(), "shadow.png", new Vector2(0.5f, 0.5f), PixelsPerUnit);
             Save(CreateNet(), "net.png", new Vector2(0.5f, 0f), PixelsPerUnit);
@@ -38,60 +36,6 @@ namespace SmilyVolley.EditorTools
         }
 
         // ------------------------------------------------------------------ dessin
-
-        /// <summary>
-        /// Dôme smiley. L'espace normalisé va de -1 à 1 en X et de 0 (sol) à 1 (sommet) en Y ;
-        /// la texture étant deux fois plus large que haute, un pixel a la même taille sur les deux axes.
-        /// </summary>
-        static Texture2D CreateBlob(Color body)
-        {
-            const int w = 400;
-            const int h = 200;
-            const float aa = 2f / w * 1.5f;
-
-            Color outline = body * 0.55f;
-            outline.a = 1f;
-            var pixels = new Color[w * h];
-
-            for (int y = 0; y < h; y++)
-            {
-                for (int x = 0; x < w; x++)
-                {
-                    float nx = (x + 0.5f) / w * 2f - 1f;
-                    float ny = (y + 0.5f) / h;
-                    var point = new Vector2(nx, ny);
-                    float d = point.magnitude;
-
-                    float alpha = Mathf.Clamp01((1f - d) / aa);
-                    if (alpha <= 0f)
-                    {
-                        pixels[y * w + x] = Color.clear;
-                        continue;
-                    }
-
-                    Color c = Color.Lerp(body, Color.white, Mathf.Clamp01(ny - 0.45f) * 0.35f);
-                    c = Color.Lerp(c, outline, Mathf.Clamp01((d - 0.90f) / 0.07f) * 0.9f);
-
-                    // Yeux : blanc de l'oeil puis pupille légèrement décalée.
-                    c = Disc(c, point, new Vector2(-0.30f, 0.64f), 0.130f, Color.white, aa);
-                    c = Disc(c, point, new Vector2(0.30f, 0.64f), 0.130f, Color.white, aa);
-                    c = Disc(c, point, new Vector2(-0.27f, 0.61f), 0.060f, Color.black, aa);
-                    c = Disc(c, point, new Vector2(0.33f, 0.61f), 0.060f, Color.black, aa);
-
-                    // Sourire : portion basse d'un anneau, arrêtée sous les yeux.
-                    if (ny < 0.46f)
-                    {
-                        float ring = Mathf.Abs(Vector2.Distance(point, new Vector2(0f, 0.50f)) - 0.26f);
-                        float mouth = 1f - Mathf.Clamp01((ring - 0.028f) / aa);
-                        c = Color.Lerp(c, new Color(0.15f, 0.10f, 0.12f), mouth);
-                    }
-
-                    pixels[y * w + x] = new Color(c.r, c.g, c.b, alpha);
-                }
-            }
-
-            return Build(w, h, pixels);
-        }
 
         static Texture2D CreateBall()
         {

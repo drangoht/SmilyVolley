@@ -1,19 +1,22 @@
 namespace SmilyVolley
 {
     /// <summary>
-    /// Interprétation graphique des blobs. Les trois styles partagent la même silhouette
-    /// et la même amplitude de déformation : seule change la façon dont la gelée réagit,
-    /// ce qui permet de les comparer sans rien modifier au jeu.
+    /// Nature de la gelée dont un blob est fait. Le style ne change pas la taille du corps ni
+    /// rien de la physique du jeu : il change la façon dont la gelée réagit — son contour au
+    /// repos, sa raideur, la durée de son ballottement. La différence se voit donc surtout en
+    /// mouvement, à l'atterrissage et sous la balle.
+    ///
+    /// Les réglages mécaniques de chaque style sont dans <see cref="BlobJelly"/>.
     /// </summary>
     public enum BlobStyle
     {
-        /// <summary>Dôme ferme. La déformation reste proche d'un simple écrasement.</summary>
+        /// <summary>Ferme : contour rond, revient vite, ne déborde qu'un peu.</summary>
         Round = 0,
 
-        /// <summary>Gelée liquide : les flancs gonflent à l'écrasement, se creusent à l'étirement.</summary>
+        /// <summary>Molle : grande amplitude, flancs qui débordent, ballotte plusieurs fois.</summary>
         Soft = 1,
 
-        /// <summary>Gelée moulée, à facettes. Ferme, avec des faces planes qui accrochent la lumière.</summary>
+        /// <summary>Moulée : contour à dix faces, très raide, les arêtes se redressent aussitôt.</summary>
         Angular = 2,
     }
 }

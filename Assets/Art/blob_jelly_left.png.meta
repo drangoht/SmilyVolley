@@ -1,10 +1,16 @@
 fileFormatVersion: 2
-guid: 8af3cae511aa38648bde4468b9ec9947
+guid: 1a2196891e9cba44eb30fafc20c43db9
 TextureImporter:
   internalIDToNameTable:
   - first:
-      213: 498238605556036721
-    second: blob_left_0
+      213: 1358108717934144203
+    second: blob_jelly_left_0
+  - first:
+      213: -7902599778256862814
+    second: blob_jelly_left_1
+  - first:
+      213: -2616939463676290018
+    second: blob_jelly_left_2
   externalObjects: {}
   serializedVersion: 13
   mipmaps:
@@ -46,18 +52,18 @@ TextureImporter:
   nPOTScale: 0
   lightmap: 0
   compressionQuality: 50
-  spriteMode: 1
+  spriteMode: 2
   spriteExtrude: 1
   spriteMeshType: 1
-  alignment: 9
-  spritePivot: {x: 0.5, y: 0}
-  spritePixelsToUnits: 200
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
   spriteBorder: {x: 0, y: 0, z: 0, w: 0}
   spriteGenerateFallbackPhysicsShape: 1
   alphaUsage: 1
   alphaIsTransparency: 1
   spriteTessellationDetail: -1
-  textureType: 8
+  textureType: 0
   textureShape: 1
   singleChannelComponent: 0
   flipbookRows: 1
@@ -139,13 +145,13 @@ TextureImporter:
     serializedVersion: 2
     sprites:
     - serializedVersion: 2
-      name: blob_left_0
+      name: blob_jelly_left_0
       rect:
         serializedVersion: 2
-        x: 0
-        y: 0
-        width: 400
-        height: 200
+        x: 37
+        y: 29
+        width: 262
+        height: 134
       alignment: 0
       pivot: {x: 0, y: 0}
       border: {x: 0, y: 0, z: 0, w: 0}
@@ -154,8 +160,52 @@ TextureImporter:
       physicsShape: []
       tessellationDetail: -1
       bones: []
-      spriteID: 174bd893f591ae600800000000000000
-      internalID: 498238605556036721
+      spriteID: bca63d2fea8f8d210800000000000000
+      internalID: 1358108717934144203
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: blob_jelly_left_1
+      rect:
+        serializedVersion: 2
+        x: 373
+        y: 29
+        width: 262
+        height: 134
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 2a14be61f53545290800000000000000
+      internalID: -7902599778256862814
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: blob_jelly_left_2
+      rect:
+        serializedVersion: 2
+        x: 709
+        y: 29
+        width: 262
+        height: 127
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e1c9fd44c63ceabd0800000000000000
+      internalID: -2616939463676290018
       vertices: []
       indices: 
       edges: []
@@ -164,7 +214,7 @@ TextureImporter:
     customData: 
     physicsShape: []
     bones: []
-    spriteID: 5e97eb03825dee720800000000000000
+    spriteID: 
     internalID: 0
     vertices: []
     indices: 
@@ -174,7 +224,9 @@ TextureImporter:
     spriteCustomMetadata:
       entries: []
     nameFileIdTable:
-      blob_left_0: 498238605556036721
+      blob_jelly_left_0: 1358108717934144203
+      blob_jelly_left_1: -7902599778256862814
+      blob_jelly_left_2: -2616939463676290018
   mipmapLimitGroupName: 
   pSDRemoveMatte: 0
   userData: 
