@@ -117,9 +117,17 @@ plancher 12 u/s   +   élan du blob sur l'axe de renvoi   +   50 % de l'excès r
 L'élan compté est celui du blob **le long de l'axe de renvoi** : courir perpendiculairement
 à la balle n'accélère rien, il faut aller dedans.
 
-Mesuré sur trois échanges du jeu compilé, avant puis après : vitesse médiane en vol
-5,3 → 11,0 u/s, maximum 13,1 → 19,1 u/s, et 13,5 % du temps de vol passé au-dessus de
-15 u/s là où le plafond n'était jamais atteint.
+Mesuré sur le jeu compilé, vitesse relevée image par image :
+
+| | Avant | Après, échange passif | Après, frappes en vol |
+|---|---|---|---|
+| Médiane en vol | 5,3 u/s | 5,4 u/s | 13,0 u/s |
+| Maximum | 13,1 u/s | 12,6 u/s | **20,2 u/s** |
+| Temps au-dessus de 15 u/s | 0 % | 0 % | 23 % |
+
+La colonne du milieu compte autant que la dernière : **un échange que personne ne relance
+n'a pas bougé**. Seul le joueur qui se jette dans la balle débloque les 20 u/s — et avant
+le chantier, ce même joueur n'obtenait rien de plus que 13,1 u/s.
 
 > **Le plafond de montée.** Sans garde-fou, un blob qui saute sous la balle lui met ses
 > 9,7 u/s d'impulsion dans la verticale : mesurée, la balle sortait par le haut du cadre.

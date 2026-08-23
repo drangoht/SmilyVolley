@@ -139,14 +139,25 @@ unité sous le haut du cadre.
 
 #### Ce que ça change, mesuré
 
-Trois échanges capturés sur chaque build, vitesse de la balle relevée image par image :
+Vitesse de la balle relevée image par image à 60 Hz sur le jeu compilé. Trois colonnes,
+parce que le chantier ne change pas tout de la même façon :
 
-| | Avant | Après |
-|---|---|---|
-| Médiane en vol | 5,3 u/s | 11,0 u/s |
-| 90ᵉ centile | 9,7 u/s | 15,6 u/s |
-| Maximum | 13,1 u/s | 19,1 u/s |
-| Temps de vol au-dessus de 15 u/s | 0 % | 13,5 % |
+| | Avant | Après, échange passif | Après, frappes en vol |
+|---|---|---|---|
+| Médiane en vol | 5,3 u/s | 5,4 u/s | 13,0 u/s |
+| 90ᵉ centile | 9,7 u/s | 9,8 u/s | 16,6 u/s |
+| Maximum | 13,1 u/s | 12,6 u/s | **20,2 u/s** |
+| Temps de vol au-dessus de 15 u/s | 0 % | 0 % | 23 % |
+
+La colonne du milieu est la plus importante : **un échange que personne ne relance n'a
+pas bougé**. Le plancher tient, la partie ne s'emballe pas toute seule, et le joueur qui
+se contente de remettre la balle joue exactement le jeu d'avant. C'est la troisième
+colonne — le blob qui saute dans chaque balle — qui débloque les 20 u/s. Avant le
+chantier, ce même joueur n'obtenait rien de plus : le maximum restait à 13,1 u/s quoi
+qu'il fasse.
+
+Corollaire à garder en tête pour les réglages : mesurer sur un échange pris au hasard ne
+dit rien du chantier. Il faut provoquer la frappe en vol pour voir quoi que ce soit.
 
 **Le son et les particules suivent.** Un smash ne peut pas sonner comme une reprise
 molle. La hauteur du son va de **0,94 au plancher à 1,14 au maximum**, soit un cinquième
