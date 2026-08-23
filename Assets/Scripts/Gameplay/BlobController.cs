@@ -49,6 +49,13 @@ namespace SmilyVolley
         public Vector2 Velocity => velocity;
         public bool Grounded => grounded;
 
+        /// <summary>
+        /// Position de départ du blob, celle qu'il retrouve à chaque service. C'est au-dessus
+        /// d'elle que la balle est engagée : s'appuyer dessus plutôt que sur la position
+        /// courante permet de placer la balle avant que les blobs ne soient replacés.
+        /// </summary>
+        public Vector2 StartPosition => startPosition;
+
         /// <summary>Bloque les commandes (fin de match, pause…) sans désactiver la gravité.</summary>
         public bool Frozen { get; set; }
 

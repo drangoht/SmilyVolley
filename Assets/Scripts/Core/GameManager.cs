@@ -197,13 +197,26 @@ namespace SmilyVolley
             if (leftBlob != null) leftBlob.ResetToStart();
             if (rightBlob != null) rightBlob.ResetToStart();
 
-            BlobController serving = server == Side.Left ? leftBlob : rightBlob;
-            float x = serving != null ? serving.transform.position.x : 0f;
-            if (ball != null) ball.Freeze(new Vector2(x, groundY + serveHeight));
+            PlaceBallForServe();
 
             if (hud != null) hud.ShowMessage("Service : " + server.Label());
 
             pendingRoutine = StartCoroutine(ReleaseBallRoutine());
+        }
+
+        /// <summary>
+        /// Fige la balle au-dessus du camp qui engage, hors simulation.
+        /// Appelée dès le point marqué et non au début du service : sinon la balle
+        /// continuerait de rebondir pendant toute la pause, et le joueur ne verrait
+        /// qu'à la fin de celle-ci à qui revient l'engagement.
+        /// </summary>
+        void PlaceBallForServe()
+        {
+            if (ball == null) return;
+
+            BlobController serving = server == Side.Left ? leftBlob : rightBlob;
+            float x = serving != null ? serving.StartPosition.x : 0f;
+            ball.Freeze(new Vector2(x, groundY + serveHeight));
         }
 
         IEnumerator ReleaseBallRoutine()
@@ -258,6 +271,12 @@ namespace SmilyVolley
 
             // Le perdant engage : le camp qui vient de marquer n'enchaîne pas deux services.
             server = serveGoesToLoser && !sideOutScoring ? winner.Opposite() : winner;
+
+            // L'échange est terminé : la balle s'arrête net et se replace côté serveur.
+            // Sans cela elle continuerait de rebondir librement pendant la pause, avec le
+            // risque de retoucher le sol et de brouiller la lecture du point qui vient
+            // d'être marqué.
+            PlaceBallForServe();
 
             if (hud != null)
             {

@@ -105,9 +105,9 @@ Toute seconde où la balle est hors de vue est une seconde perdue.
    │                                                              │
    ▼                                                              │
 Service ──1,1 s──▶ Échange ──balle au sol──▶ Point ──1,8 s──▶ ────┘
-(balle figée      (rally libre,            (score, message,
- au-dessus du      aucune limite            le perdant récupère
- serveur)          de touches)              le service)
+(balle figée      (rally libre,            (la balle s'arrête net
+ au-dessus du      aucune limite            et se replace côté
+ serveur)          de touches)              perdant : score, message)
                                                   │
                                        15 pts et 2 d'écart
                                                   ▼
@@ -118,13 +118,19 @@ Service ──1,1 s──▶ Échange ──balle au sol──▶ Point ──1,
 La machine à états est portée par `GameManager` : `Serving → Rally → PointScored → Serving`,
 avec `MatchOver` comme sortie.
 
+**L'échange se termine à l'instant du point.** Dès que le point est attribué, la balle
+sort de la simulation et se replace au-dessus du camp qui va engager — celui qui vient
+de perdre. Elle ne rebondit pas pendant la pause : le joueur voit immédiatement qui
+récupère le service, et une balle encore en mouvement ne peut pas retoucher le sol et
+brouiller la lecture du point qui vient d'être marqué.
+
 ### Durée d'une séquence
 
 | Phase | Durée | Intention |
 |---|---|---|
 | Service | 1,1 s | Laisser le temps de se replacer, sans casser le rythme |
 | Échange | variable | Le cœur du jeu |
-| Point marqué | 1,8 s | Lire le score et le message, souffler |
+| Point marqué | 1,8 s | Lire le score et le message, souffler — balle immobile |
 
 ---
 
@@ -154,8 +160,15 @@ c'est délibéré : en rally point, laisser le service au gagnant crée des sér
 > ce mode, seul le serveur marque, donc donner le service au perdant empêcherait le
 > score de monter.
 
-La balle est figée 1,1 s à 3,6 unités au-dessus du blob serveur, puis lâchée sans
-vitesse initiale. Les deux blobs sont replacés à leur position de départ.
+La balle rejoint sa position d'engagement — 3,6 unités au-dessus de la **position de
+départ** du blob serveur — dès l'attribution du point, et non à la fin de la pause.
+Elle y reste immobile pendant toute la pause (1,8 s), puis pendant le délai de service
+(1,1 s), avant d'être lâchée sans vitesse initiale. Les deux blobs sont replacés à leur
+position de départ au début du service.
+
+> S'appuyer sur la position de départ du blob plutôt que sur sa position courante est
+> ce qui permet de placer la balle **avant** que les blobs ne soient replacés : le point
+> d'engagement est le même quel que soit l'endroit où le rally s'est terminé.
 
 ### 4.4 Le nombre de touches
 
@@ -509,7 +522,7 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 |---|---|---|
 | Échange qui s'éternise sans limite de touches | Partie qui traîne | La règle des 3 touches est codée, activable en un champ |
 | IA à difficulté 1 imbattable | Frustration | Défaut à 0,65 ; à exposer dans un menu de difficulté |
-| Balle immobile sur un blob inerte au service | Échange qui tourne en boucle avant démarrage | À traiter : donner une impulsion latérale au service |
+| Balle qui rebondit indéfiniment sur un blob ou sur le filet | **Observé** : sans joueur pour la reprendre, la balle peut osciller verticalement plus de 40 s sans jamais toucher le sol — le match se bloque | À traiter : impulsion latérale au service, et angle minimal de renvoi quand la balle repart quasi verticale |
 | Sprites générés par code | Aspect provisoire | Assumé ; remplaçables sans toucher au code |
 | Dispositions clavier exotiques | Aide à l'écran trompeuse | `LabelOf` lit la disposition système, pas de valeur en dur |
 
