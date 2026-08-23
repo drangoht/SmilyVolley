@@ -128,9 +128,13 @@ Toute seconde où la balle est hors de vue est une seconde perdue.
    │                                                              │
    ▼                                                              │
 Service ──1,1 s──▶ Échange ──balle au sol──▶ Point ──1,8 s──▶ ────┘
-(balle figée,     (rally libre,            (la balle s'arrête net
- blobs bloqués     aucune limite            et se replace côté
- sur leur ligne)   de touches)              perdant : score, message)
+(balle figée,     (rally libre,            (tout s'arrête : balle
+ blobs bloqués     aucune limite            replacée côté perdant,
+ sur leur ligne)   de touches)              blobs bloqués eux aussi)
+
+  └──────────────────────┘        └────────────────────────────────┘
+    seule phase jouable              personne ne joue : les commandes
+                                     sont coupées jusqu'au lâcher
                                                   │
                                        15 pts et 2 d'écart
                                                   ▼
@@ -141,11 +145,16 @@ Service ──1,1 s──▶ Échange ──balle au sol──▶ Point ──1,
 La machine à états est portée par `GameManager` : `Serving → Rally → PointScored → Serving`,
 avec `MatchOver` comme sortie.
 
-**L'échange se termine à l'instant du point.** Dès que le point est attribué, la balle
-sort de la simulation et se replace au-dessus du camp qui va engager — celui qui vient
-de perdre. Elle ne rebondit pas pendant la pause : le joueur voit immédiatement qui
-récupère le service, et une balle encore en mouvement ne peut pas retoucher le sol et
-brouiller la lecture du point qui vient d'être marqué.
+**L'échange se termine à l'instant du point, et le jeu avec lui.** Dès que le point est
+attribué, la balle sort de la simulation et se replace au-dessus du camp qui va engager
+— celui qui vient de perdre — et **les blobs cessent de répondre aux commandes**. Rien
+ne bouge plus jusqu'au lâcher de balle suivant, message de point et service compris.
+
+La règle tient en une phrase : **on ne joue que lorsque la balle est en jeu.** Elle évite
+trois désagréments — une balle qui rebondirait pendant la pause et pourrait retoucher le
+sol, brouillant la lecture du point ; une agitation sans objet pendant le message,
+puisque les blobs sont de toute façon replacés sur leur ligne au service ; et un
+relanceur qui se posterait sous la balle avant même qu'elle ne parte.
 
 ### Durée d'une séquence
 
@@ -153,7 +162,7 @@ brouiller la lecture du point qui vient d'être marqué.
 |---|---|---|
 | Service | 1,1 s | Lire qui engage et se préparer — les deux camps sont bloqués |
 | Échange | variable | Le cœur du jeu |
-| Point marqué | 1,8 s | Lire le score et le message, souffler — balle immobile |
+| Point marqué | 1,8 s | Lire le score et le message — balle et blobs immobiles |
 
 ---
 
@@ -183,13 +192,11 @@ c'est délibéré : en rally point, laisser le service au gagnant crée des sér
 > ce mode, seul le serveur marque, donc donner le service au perdant empêcherait le
 > score de monter.
 
-**Les deux camps sont bloqués pendant tout le service.** Les blobs sont replacés sur
-leur ligne de départ et ne répondent plus aux commandes jusqu'au lâcher de balle ; ils
-retrouvent la main exactement à l'image où celle-ci part. Sans ce blocage le
-replacement ne servait à rien : chacun repartait aussitôt pendant la seconde d'attente,
-et le relanceur pouvait déjà se poster sous la balle avant qu'elle ne tombe. La
-contrainte vaut pour l'IA comme pour le joueur — elle passe par la même abstraction
-d'entrée.
+**Les deux camps sont bloqués depuis le point précédent jusqu'au lâcher de balle.** Ils
+sont replacés sur leur ligne de départ au service et retrouvent la main exactement à
+l'image où la balle part — même ligne pour les deux, aucune avance de l'un sur l'autre.
+La contrainte vaut pour l'IA comme pour le joueur : `BlobController.Frozen` coupe la
+lecture des commandes en amont de l'abstraction `BlobInput`, quelle qu'en soit la source.
 
 La balle rejoint sa position d'engagement — 3,6 unités au-dessus de la **position de
 départ** du blob serveur, décalée de 0,4 unité vers le filet — dès l'attribution du

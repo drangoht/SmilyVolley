@@ -50,12 +50,11 @@ scène. Le projet se clone et se lance tel quel.
   `Max Touches Per Side` à 3 sur le `GameManager` la réactive.
 - Match en **15 points** avec 2 points d'écart.
 - **Le camp qui perd le point engage** (décochable via `Serve Goes To Loser`).
-- **L'échange s'arrête à l'instant du point** : la balle sort de la simulation et se
-  replace aussitôt au-dessus du camp qui va engager, au lieu de continuer à rebondir
-  pendant la pause.
-- Service automatique après 1,1 s, au-dessus du joueur qui engage. **Les deux camps
-  sont bloqués sur leur ligne de départ pendant ce compte à rebours** et retrouvent la
-  main à l'image exacte où la balle part.
+- **On ne joue que lorsque la balle est en jeu.** À l'instant du point, la balle sort de
+  la simulation et se replace au-dessus du camp qui va engager, et les blobs cessent de
+  répondre aux commandes. Rien ne bouge pendant le message de point ni pendant le
+  service : les deux camps retrouvent la main à l'image exacte où la balle part.
+- Service automatique après 1,1 s, au-dessus du joueur qui engage.
 - Comptage *rally point* par défaut ; cocher `Side Out Scoring` sur le `GameManager`
   pour revenir au comptage historique (seul le serveur marque).
 

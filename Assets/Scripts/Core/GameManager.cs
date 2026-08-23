@@ -209,9 +209,9 @@ namespace SmilyVolley
             if (leftBlob != null) leftBlob.ResetToStart();
             if (rightBlob != null) rightBlob.ResetToStart();
 
-            // Les deux camps sont bloqués jusqu'au lâcher de balle. Sans cela, le replacement
-            // au service ne servait à rien : chacun repartait aussitôt du pied gauche pendant
-            // la seconde d'attente, et le relanceur pouvait déjà se poster sous la balle.
+            // Les deux camps restent bloqués jusqu'au lâcher de balle. Après un point ils
+            // le sont déjà depuis AwardPoint ; l'appel compte pour le premier service et
+            // pour la relance au clavier, qui ne passent pas par là.
             SetBlobsFrozen(true);
 
             PlaceBallForServe();
@@ -300,11 +300,14 @@ namespace SmilyVolley
             // Le perdant engage : le camp qui vient de marquer n'enchaîne pas deux services.
             server = serveGoesToLoser && !sideOutScoring ? winner.Opposite() : winner;
 
-            // L'échange est terminé : la balle s'arrête net et se replace côté serveur.
-            // Sans cela elle continuerait de rebondir librement pendant la pause, avec le
-            // risque de retoucher le sol et de brouiller la lecture du point qui vient
-            // d'être marqué.
+            // L'échange est terminé : tout s'arrête, la balle comme les blobs, et plus rien
+            // ne bouge jusqu'au lâcher de balle suivant. La balle se replace côté serveur
+            // plutôt que de continuer à rebondir — au risque de retoucher le sol et de
+            // brouiller la lecture du point — et les joueurs lâchent la partie le temps
+            // d'afficher le score : s'agiter pendant le message n'avancerait à rien, ils
+            // sont replacés sur leur ligne au service.
             PlaceBallForServe();
+            SetBlobsFrozen(true);
 
             if (hud != null)
             {
