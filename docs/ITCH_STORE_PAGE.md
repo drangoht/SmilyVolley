@@ -4,8 +4,8 @@
 > qui est écrit ici existe dans le build (sources : `README.md`, `docs/GDD.md`). Ne rien
 > ajouter qui n'ait été vérifié dans le jeu qui tourne.
 >
-> Page : <https://drangoht.itch.io/smily-volley> — **version web uniquement**, poussée sur le
-> canal `html5` par `tools/release_itch.ps1`.
+> Page : <https://drangoht.itch.io/smily-volley> — **publique depuis le 24 août 2026**, en
+> **version web uniquement**, poussée sur le canal `html5` par `tools/release_itch.ps1`.
 
 ---
 
@@ -96,8 +96,8 @@ rejoue parce que le point précédent s'est joué de peu.
 
 ## 6. Tags itch.io
 
-`volleyball` · `sports` · `local-multiplayer` · `2d` · `arcade` · `blobby-volley` · `unity`
-· `singleplayer` · `physics` · `beach`
+Posés sur la page : `volleyball` · `sports` · `local-multiplayer` · `arcade` · `2d` ·
+`physics` · `singleplayer` · `unity`.
 
 ---
 
@@ -115,7 +115,17 @@ Toutes dans `docs/itch/`, régénérées depuis le jeu qui tourne :
 
 ---
 
-## 8. Crédits (bas de page)
+## 8. Déclaration d'IA
+
+itch.io exige de classer le contenu produit par IA générative ; la classification est
+obligatoire et alimente les filtres du site. Coché sur la page : **Graphics**,
+**Text & Dialog**, **Code**. **Sounds** ne l'est pas : les deux musiques et les effets sont
+des œuvres CC0 d'auteurs identifiés (Brandon Morris, Trex0n, Kenney), et la police est sous
+licence OFL.
+
+---
+
+## 9. Crédits (bas de page)
 
 - Musique : *Feel Good Island Loop* de **Brandon Morris** et *Beach Sports Theme* de
   **Trex0n** (Cal McEachern), toutes deux en **CC0** — [OpenGameArt](https://opengameart.org).
