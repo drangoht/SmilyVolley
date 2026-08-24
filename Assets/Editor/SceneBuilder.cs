@@ -649,12 +649,18 @@ namespace SmilyVolley.EditorTools
             audio.ballLandClips = LoadClips("impactSoft_heavy");
             audio.blobLandClips = LoadClips("footstep_snow");
             audio.pointClips = LoadClips("impactBell_heavy");
-            audio.musicClip = LoadMusic();
+            audio.musicClip = LoadMusic(menu: false);
+            audio.menuMusicClip = LoadMusic(menu: true);
             return audio;
         }
 
-        /// <summary>Premier morceau trouvé dans le dossier de musique. Absent : le jeu se joue en silence.</summary>
-        static AudioClip LoadMusic()
+        /// <summary>
+        /// Morceau du dossier de musique. Le nom fait le tri : celui qui porte « menu »
+        /// accompagne l'affiche, le premier des autres accompagne le match. Aucun réglage
+        /// à toucher pour remplacer l'un ou l'autre — il suffit de nommer le fichier.
+        /// Absent : le jeu se joue en silence, et le menu garde la musique du match.
+        /// </summary>
+        static AudioClip LoadMusic(bool menu)
         {
             if (!AssetDatabase.IsValidFolder(MusicFolder))
             {
@@ -664,11 +670,16 @@ namespace SmilyVolley.EditorTools
 
             foreach (string guid in AssetDatabase.FindAssets("t:AudioClip", new[] { MusicFolder }))
             {
-                var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(AssetDatabase.GUIDToAssetPath(guid));
+                string path = AssetDatabase.GUIDToAssetPath(guid);
+                bool isMenu = System.IO.Path.GetFileNameWithoutExtension(path)
+                    .IndexOf("menu", System.StringComparison.OrdinalIgnoreCase) >= 0;
+                if (isMenu != menu) continue;
+
+                var clip = AssetDatabase.LoadAssetAtPath<AudioClip>(path);
                 if (clip != null) return clip;
             }
 
-            Debug.LogWarning("Aucune musique trouvée dans " + MusicFolder);
+            Debug.LogWarning($"Aucune musique {(menu ? "de menu" : "de match")} trouvée dans {MusicFolder}");
             return null;
         }
 

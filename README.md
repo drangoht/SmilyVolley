@@ -183,11 +183,19 @@ Chaque impact a un retour sonore et visuel :
 | Point marqué | Cloche | — |
 | Fin de match | Arpège de cloches | — |
 
-Une **musique de fond** tourne en boucle : *Feel Good Island Loop* de **Brandon Morris**
-([OpenGameArt](https://opengameart.org/content/feel-good-island-loop)), en **CC0**. Elle
-est jouée à 0,25 de volume, soit une douzaine de décibels sous les frappes — le morceau
-a un niveau proche de celui des effets, le baisser est ce qui le place derrière l'action.
-Démarrage en fondu de 1,5 s.
+Deux **musiques de fond** tournent en boucle, en **CC0** : *Feel Good Island Loop* de
+**Brandon Morris** ([OpenGameArt](https://opengameart.org/content/feel-good-island-loop))
+pendant le match, et *Beach Sports Theme* de **Trex0n**
+([OpenGameArt](https://opengameart.org/content/beach-sports-theme-loop)) sur l'affiche du
+menu principal. Elles sont jouées à 0,25 de volume, soit une douzaine de décibels sous
+les frappes — les morceaux ont un niveau proche de celui des effets, le baisser est ce
+qui les place derrière l'action. Démarrage en fondu de 1,5 s.
+
+Le menu principal a sa musique, la pause garde celle du match : on y est encore, et la
+couper le temps de régler un volume ferait deux fondus enchaînés pour rien. Le passage
+d'un morceau à l'autre est un fondu enchaîné de 0,8 s, compté sur le temps non mis à
+l'échelle — le menu arrête l'horloge du jeu, et un fondu réglé sur l'horloge du jeu
+resterait figé tant qu'on n'en sort pas.
 
 Les effets viennent du pack **Impact Sounds** de [Kenney](https://kenney.nl/assets/impact-sounds),
 également en **CC0** — domaine public, aucune attribution exigée dans les deux cas (elle
@@ -251,7 +259,7 @@ l'autre.
 Assets/
 ├── Art/                 Sprites et peaux générés par code + matériaux
 ├── Audio/Kenney/        Effets CC0 + licence et provenance
-├── Audio/Music/         Musique CC0 + licence et provenance
+├── Audio/Music/         Musiques CC0 (match + menu) + licence et provenance
 ├── Settings/            Pipeline URP, Renderer 2D, volume profile par défaut
 ├── Editor/              → assembly SmilyVolley.Editor (exclue du build)
 │   ├── PlaceholderArt.cs      Dessine les PNG (balle, filet, ciel, ombre, particule)
@@ -338,6 +346,7 @@ retourne localement quand la gelée se creuse, et une face arrière disparaîtra
 | `Visual` *(BlobJelly)* | `Land Gain`, `Jump Gain`, `Ball Gain`, `Inertia` | Ampleur de chaque source de déformation |
 | `Audio` | Volumes par événement, `Pitch Jitter` | Équilibre et variété du mixage |
 | `Audio` | `Music Volume`, `Music Fade In Seconds` | Présence de la musique |
+| `Audio` | `Menu Music Gain`, `Music Crossfade Seconds` | Niveau du morceau du menu, durée du fondu enchaîné |
 | `Audio` | `Jump Volume`, `Jump Pitch` | Discrétion de l'appui du saut |
 | `ImpactEffects` | Nombre de particules par effet | Densité des bouffées |
 

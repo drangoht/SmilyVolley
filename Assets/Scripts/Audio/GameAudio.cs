@@ -27,10 +27,18 @@ namespace SmilyVolley
 
         [Header("Musique")]
         public AudioClip musicClip;
+        [Tooltip("Morceau du menu principal. Absent : le menu garde la musique du match.")]
+        public AudioClip menuMusicClip;
         [Tooltip("Le morceau a un niveau proche de celui des effets : le baisser est ce qui " +
                  "le place derrière l'action au lieu de la concurrencer.")]
         [Range(0f, 1f)] public float musicVolume = 0.25f;
         public float musicFadeInSeconds = 1.5f;
+        [Tooltip("Rattrapage de niveau du morceau du menu, gravé une fois pour toutes ici " +
+                 "plutôt que dans le fichier : il est mixé 6 dB sous celui du match, et " +
+                 "passer de l'un à l'autre s'entendrait comme un coup de volume.")]
+        [Range(0f, 4f)] public float menuMusicGain = 2f;
+        [Tooltip("Durée du fondu enchaîné entre les deux morceaux.")]
+        public float musicCrossfadeSeconds = 0.8f;
 
         [Header("Volumes")]
         [Tooltip("Multiplie tous les effets. C'est le curseur exposé dans le menu ; les " +
@@ -64,9 +72,14 @@ namespace SmilyVolley
         // unique donnerait la même à tous les sons simultanés. D'où le tourniquet.
         AudioSource[] voices;
         AudioSource music;
+        AudioSource menuMusic;
         int nextVoice;
         int victoryNote;
         float musicFadeStart;
+        // Position du fondu enchaîné : 0 sur le match, 1 sur le menu.
+        float menuBlend;
+        bool onMenu;
+        bool blendSnapped;
 
         void Awake()
         {
@@ -82,36 +95,102 @@ namespace SmilyVolley
                 voices[i] = source;
             }
 
-            music = gameObject.AddComponent<AudioSource>();
-            music.playOnAwake = false;
-            music.loop = true;
-            music.spatialBlend = 0f;
-            music.clip = musicClip;
+            music = BuildMusicSource(musicClip);
+            menuMusic = BuildMusicSource(menuMusicClip);
+        }
+
+        AudioSource BuildMusicSource(AudioClip clip)
+        {
+            var source = gameObject.AddComponent<AudioSource>();
+            source.playOnAwake = false;
+            source.loop = true;
+            source.spatialBlend = 0f;
+            source.clip = clip;
+            return source;
         }
 
         void Start()
         {
-            if (musicClip == null || music == null) return;
-
             // Démarrage en fondu : la musique attaque à plein volume dès l'image 1 sinon,
             // juste au moment où le joueur découvre l'écran.
-            musicFadeStart = Time.time;
-            music.volume = musicFadeInSeconds > 0f ? 0f : musicVolume;
-            music.Play();
+            //
+            // Temps non mis à l'échelle : le menu s'ouvre sur Time.timeScale = 0, où
+            // Time.time cesse d'avancer. Un fondu réglé dessus resterait figé tant que le
+            // joueur n'a pas quitté le menu.
+            musicFadeStart = Time.unscaledTime;
+
+            // Les deux morceaux tournent ensemble, chacun à son volume. Le fondu enchaîné
+            // n'est qu'un dosage : reprendre un morceau à zéro à chaque pause rejouerait
+            // son attaque toutes les trente secondes.
+            StartMusic(music);
+            StartMusic(menuMusic);
+        }
+
+        static void StartMusic(AudioSource source)
+        {
+            if (source == null || source.clip == null) return;
+            source.volume = 0f;
+            source.Play();
+        }
+
+        /// <summary>
+        /// Fait passer la bande sonore au morceau du menu, ou la ramène sur celui du match.
+        /// Appelé par le menu à chaque ouverture et fermeture.
+        /// </summary>
+        public void SetMenuTheme(bool active)
+        {
+            // Sans morceau de menu, le match reste à l'antenne : mieux vaut sa boucle que
+            // le silence sur l'affiche.
+            onMenu = active && menuMusicClip != null;
         }
 
         void Update()
         {
-            if (music == null || !music.isPlaying) return;
+            float target = onMenu ? 1f : 0f;
 
-            float target = musicVolume;
-            if (musicFadeInSeconds > 0f)
+            // Le premier Update tombe après le Start du menu : à cet instant seulement on
+            // sait sur quel morceau ouvrir, et il doit s'installer sans traverser l'autre.
+            if (!blendSnapped)
             {
-                float t = Mathf.Clamp01((Time.time - musicFadeStart) / musicFadeInSeconds);
-                target *= t;
+                menuBlend = target;
+                blendSnapped = true;
+            }
+            else
+            {
+                float step = musicCrossfadeSeconds > 0f
+                    ? Time.unscaledDeltaTime / musicCrossfadeSeconds
+                    : 1f;
+                menuBlend = Mathf.MoveTowards(menuBlend, target, step);
             }
 
-            if (!Mathf.Approximately(music.volume, target)) music.volume = target;
+            float opening = musicFadeInSeconds > 0f
+                ? Mathf.Clamp01((Time.unscaledTime - musicFadeStart) / musicFadeInSeconds)
+                : 1f;
+
+            SetMusicVolume(music, musicVolume * opening * (1f - menuBlend));
+            SetMusicVolume(menuMusic, musicVolume * menuMusicGain * opening * menuBlend);
+        }
+
+        /// <summary>
+        /// Pose le volume d'un morceau et met en pause celui qu'on n'entend plus : un
+        /// AudioSource à volume nul continue sinon de décoder son flux pour rien.
+        /// </summary>
+        static void SetMusicVolume(AudioSource source, float volume)
+        {
+            if (source == null || source.clip == null) return;
+
+            volume = Mathf.Clamp01(volume);
+            if (!Mathf.Approximately(source.volume, volume)) source.volume = volume;
+
+            if (volume <= 0.001f)
+            {
+                if (source.isPlaying) source.Pause();
+            }
+            else if (!source.isPlaying)
+            {
+                // UnPause reprend là où le morceau s'était arrêté, Play le reprendrait au début.
+                source.UnPause();
+            }
         }
 
         void OnEnable()

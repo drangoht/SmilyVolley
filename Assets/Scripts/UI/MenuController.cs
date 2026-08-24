@@ -196,6 +196,7 @@ namespace SmilyVolley
             Build();
             Dress();
             SelectFirstSelectable();
+            ApplyMusicTheme();
 
             // Le curseur se repose sur la nouvelle ligne au lieu d'y glisser depuis
             // l'écran précédent, dont les lignes n'ont rien à voir.
@@ -216,6 +217,22 @@ namespace SmilyVolley
             if (hudCanvas != null) hudCanvas.enabled = true;
             if (manager != null) manager.InputLocked = false;
             Time.timeScale = 1f;
+            ApplyMusicTheme();
+        }
+
+        /// <summary>
+        /// Choisit le morceau qui accompagne l'écran courant. La musique du menu appartient
+        /// à l'affiche, pas au menu en général : sur la pause, on est encore dans le match
+        /// — le couper de sa bande sonore le temps de régler un volume ferait deux fondus
+        /// enchaînés pour rien. Les options héritent de l'écran d'où on les a ouvertes.
+        /// </summary>
+        void ApplyMusicTheme()
+        {
+            if (gameAudio == null) return;
+
+            bool fromMain = current == Screen.Main
+                || (current == Screen.Options && previous == Screen.Main);
+            gameAudio.SetMenuTheme(fromMain);
         }
 
         // ------------------------------------------------------------------ boucle
