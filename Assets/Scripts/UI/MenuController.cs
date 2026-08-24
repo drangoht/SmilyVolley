@@ -62,6 +62,16 @@ namespace SmilyVolley
                  "côté ou de l'autre.")]
         public Text scrollUp;
         public Text scrollDown;
+        [Tooltip("Le blob qui montre la ligne choisie, à la place d'un bandeau.")]
+        public MenuCursor cursor;
+        [Tooltip("Porte le fondu d'ouverture de la carte.")]
+        public CanvasGroup cardGroup;
+
+        [Header("Animation")]
+        [Tooltip("Durée du fondu à l'ouverture d'un écran.")]
+        public float openTime = 0.20f;
+        [Tooltip("De combien la carte monte pendant ce fondu.")]
+        public float openRise = 34f;
 
         [Header("Touches du menu")]
         public Key upKey = Key.UpArrow;
@@ -131,6 +141,8 @@ namespace SmilyVolley
         Key heldDirection = Key.None;
         float nextRepeat;
         float nextWheel;
+        float opening;
+        float cardHome;
 
         public bool IsOpen => current != Screen.None;
 
@@ -140,6 +152,8 @@ namespace SmilyVolley
         {
             settings.Load();
             settings.ApplyTo(manager, gameAudio, leftBlob, rightBlob);
+
+            if (card != null) cardHome = card.anchoredPosition.y;
 
             if (rows == null) return;
             for (int i = 0; i < rows.Length; i++)
@@ -182,6 +196,12 @@ namespace SmilyVolley
             Build();
             Dress();
             SelectFirstSelectable();
+
+            // Le curseur se repose sur la nouvelle ligne au lieu d'y glisser depuis
+            // l'écran précédent, dont les lignes n'ont rien à voir.
+            if (cursor != null) cursor.SetVisible(false);
+            opening = 1f;
+
             Refresh();
         }
 
@@ -202,6 +222,8 @@ namespace SmilyVolley
 
         void Update()
         {
+            if (IsOpen) AnimateOpening();
+
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
 
@@ -318,6 +340,11 @@ namespace SmilyVolley
 
             entries[selected].Adjust?.Invoke(direction);
             ApplyAndRefresh();
+
+            // Après le rafraîchissement : la ligne montre alors la valeur qui vient de
+            // changer, et c'est elle qu'on fait sursauter.
+            MenuRow row = RowOf(selected);
+            if (row != null) row.Pop();
         }
 
         void Activate()
@@ -602,6 +629,52 @@ namespace SmilyVolley
         // ------------------------------------------------------------------ affichage
 
         /// <summary>
+        /// Fondu d'ouverture : la carte monte de quelques pixels en apparaissant. Un écran
+        /// qui surgit d'un coup se lit comme un défaut d'affichage ; ce court trajet dit
+        /// que le menu arrive par-dessus le jeu.
+        /// </summary>
+        void AnimateOpening()
+        {
+            if (opening <= 0f) return;
+
+            opening = Mathf.Max(0f, opening - Time.unscaledDeltaTime / Mathf.Max(0.01f, openTime));
+            float eased = opening * opening;
+
+            if (cardGroup != null) cardGroup.alpha = 1f - eased;
+            if (card != null)
+            {
+                card.anchoredPosition = new Vector2(card.anchoredPosition.x,
+                    cardHome - openRise * eased);
+            }
+        }
+
+        /// <summary>
+        /// Pose le blob sur la ligne choisie. Sa hauteur est celle de la ligne dans la
+        /// carte, et il se cache dès que la sélection sort de ce qui est affiché — sur un
+        /// intertitre, par exemple, où il n'y a rien à désigner.
+        /// </summary>
+        void PlaceCursor()
+        {
+            if (cursor == null) return;
+
+            int row = selected - scroll;
+            bool visible = IsOpen && row >= 0 && row < rows.Length && IsValid(selected);
+            cursor.SetVisible(visible);
+            if (!visible) return;
+
+            // Les lignes descendent depuis le haut de la liste, elle-même sous la marge
+            // haute de la carte : le blob suit la même règle pour rester à leur niveau.
+            cursor.Follow(-cardPadding - (row + 0.5f) * rowHeight);
+        }
+
+        /// <summary>La ligne affichée pour une entrée, ou <c>null</c> si elle a défilé hors du cadre.</summary>
+        MenuRow RowOf(int index)
+        {
+            int row = index - scroll;
+            return rows != null && row >= 0 && row < rows.Length ? rows[row] : null;
+        }
+
+        /// <summary>
         /// Habille l'écran courant : l'affiche derrière le menu principal, le terrain
         /// derrière la pause et les options.
         ///
@@ -686,6 +759,8 @@ namespace SmilyVolley
                     entry.Kind == EntryKind.KeyBind && awaitingKey >= 0 && index == selected,
                     entry.Adjust != null);
             }
+
+            PlaceCursor();
 
             if (footerText != null) footerText.text = BuildFooter();
         }

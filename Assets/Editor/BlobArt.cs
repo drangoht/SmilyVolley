@@ -22,6 +22,7 @@ namespace SmilyVolley.EditorTools
     {
         public const string LeftFile = "blob_jelly_left.png";
         public const string RightFile = "blob_jelly_right.png";
+        public const string CursorFile = "blob_cursor.png";
         public const string LeftMaterial = "BlobLeft.mat";
         public const string RightMaterial = "BlobRight.mat";
 
@@ -37,6 +38,7 @@ namespace SmilyVolley.EditorTools
 
             Generate(Side.Left);
             Generate(Side.Right);
+            GenerateCursor();
 
             AssetDatabase.Refresh();
             Debug.Log("Smily Volley : peau des blobs régénérée dans " + PlaceholderArt.ArtFolder);
@@ -74,6 +76,80 @@ namespace SmilyVolley.EditorTools
             AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
             ConfigureImport(path);
             BuildMaterial(side);
+        }
+
+        /// <summary>
+        /// Le blob qui montre la ligne choisie dans le menu, dessiné par le même code que
+        /// ses grands frères : même silhouette, même lumière, même sourire. Un curseur
+        /// dessiné à part aurait fini par ne plus leur ressembler.
+        ///
+        /// Le style rond plutôt qu'à facettes : le joueur peut changer l'apparence des
+        /// blobs du terrain, le menu ne suit pas — son curseur doit rester le même repère
+        /// d'un écran à l'autre.
+        /// </summary>
+        static void GenerateCursor()
+        {
+            var pixels = new Color[BlobJelly.TileWidth * BlobJelly.TileHeight];
+            DrawTile(pixels, BlobJelly.TileWidth, 0, BlobStyle.Round, PlaceholderArt.LeftBody);
+
+            // La tuile réserve de la place au ballottement de la gelée : le blob au repos
+            // n'en occupe que le bas. Gardée telle quelle, l'image d'interface serait pour
+            // moitié du vide, et le blob y paraîtrait deux fois trop petit.
+            Texture2D texture = Crop(pixels, BlobJelly.TileWidth, BlobJelly.TileHeight);
+
+            string path = PlaceholderArt.ArtFolder + "/" + CursorFile;
+            File.WriteAllBytes(path, texture.EncodeToPNG());
+            Object.DestroyImmediate(texture);
+
+            AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceUpdate);
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null) return;
+
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.spritePixelsPerUnit = 100f;
+            importer.mipmapEnabled = false;
+            importer.alphaIsTransparency = true;
+            importer.SaveAndReimport();
+        }
+
+        /// <summary>Retaille une image sur ce qu'elle a de visible, marges transparentes ôtées.</summary>
+        static Texture2D Crop(Color[] pixels, int width, int height)
+        {
+            int left = width, right = -1, bottom = height, top = -1;
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    if (pixels[y * width + x].a <= 0.02f) continue;
+
+                    if (x < left) left = x;
+                    if (x > right) right = x;
+                    if (y < bottom) bottom = y;
+                    if (y > top) top = y;
+                }
+            }
+
+            if (right < left || top < bottom) return Build(width, height, pixels);
+
+            int w = right - left + 1;
+            int h = top - bottom + 1;
+            var cropped = new Color[w * h];
+            for (int y = 0; y < h; y++)
+            {
+                System.Array.Copy(pixels, (bottom + y) * width + left, cropped, y * w, w);
+            }
+
+            return Build(w, h, cropped);
+        }
+
+        static Texture2D Build(int width, int height, Color[] pixels)
+        {
+            var texture = new Texture2D(width, height, TextureFormat.RGBA32, false);
+            texture.SetPixels(pixels);
+            texture.Apply();
+            return texture;
         }
 
         static void DrawTile(Color[] pixels, int sheetWidth, int originX, BlobStyle style, Color body)

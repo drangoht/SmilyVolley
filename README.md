@@ -19,7 +19,8 @@ où la balle touche le blob.
 3. Play
 
 Aucune dépendance externe : les sprites sont générés par code au premier build de scène,
-à la seule exception de l'affiche du menu. Le projet se clone et se lance tel quel.
+à la seule exception de l'affiche du menu. La police est dans le dépôt, sa licence à côté.
+Le projet se clone et se lance tel quel.
 
 ## Menu et options
 
@@ -32,6 +33,12 @@ préfèrent le terrain sous un voile clair — un réglage se juge sur ce qu'il 
 entrées reposent sur une carte de sable dont la hauteur suit le nombre de lignes, et dont
 la largeur se resserre sur les écrans sans réglage. Une flèche apparaît dans sa marge quand
 la liste déborde — l'écran d'options est plus long que l'écran, et rien ne le disait.
+
+La ligne choisie n'est pas surlignée : **un blob la désigne**, dessiné par le même code que
+ceux du terrain, et il saute de l'une à l'autre en s'écrasant comme la gelée du jeu. Le
+libellé s'écarte pour lui faire place, la carte monte en fondu à l'ouverture, et une valeur
+qu'on règle sursaute. Le texte est en **Fredoka** (`Assets/Fonts`, SIL Open Font License) :
+des lettres rondes et pleines, de la même famille de formes que les blobs.
 
 La navigation est au clavier — `↑ ↓` naviguer, `← →` régler, `Entrée` valider,
 `Échap` revenir. `+` et `−` du pavé numérique doublent `← →`. La souris fait tout

@@ -529,6 +529,29 @@ raison de deviner qu'il restait des réglages.
 > texture ni la compression n'y changent rien (essayées en 4096 non compressé, le flou est
 > identique). En logo elle est nette, mais l'écran de lancement par défaut a été préféré.
 
+**Un blob montre la ligne, il n'y a plus de bandeau.** Un rectangle de couleur dit « cette
+ligne » sans rien dire du jeu. À sa place, un blob dessiné par le même code que ceux du
+terrain — même silhouette, même lumière, même sourire — se pose devant l'entrée choisie. Il
+est toujours rond, quel que soit le style choisi pour les blobs du match : le curseur doit
+rester le même repère d'un écran à l'autre. Le libellé s'écarte pour lui faire place, et
+passe au vert du blob : le curseur et son libellé forment une seule marque, là où deux
+couleurs sans rapport en feraient deux.
+
+**Ce qui bouge, et pourquoi.** Le blob ne se téléporte pas : il glisse vers sa ligne en
+s'écrasant dans le sens de sa course, puis s'étire en arrivant — la gelée du terrain, dans
+le menu. Au repos il respire. La carte monte de quelques pixels en fondu à l'ouverture d'un
+écran : un menu qui surgit d'un coup se lit comme un défaut d'affichage. Une valeur qu'on
+règle sursaute, parce que c'est la seule chose qui change sur une ligne dont le libellé,
+lui, ne bouge pas. Tout se calcule en temps non affecté par l'échelle — le menu fige le jeu
+à `timeScale` zéro, une animation qui s'appuierait sur `Time.deltaTime` ne bougerait jamais.
+
+**La police dit le jeu.** Arial, qui servait avant, habille aussi bien un tableur. Le jeu
+est écrit en **Fredoka** (SIL Open Font License, dans `Assets/Fonts` avec sa licence) : des
+lettres rondes et pleines, de la même famille de formes que les blobs et que le logo de
+l'affiche. Elle est plus fine qu'Arial au même calibre, d'où un corps un peu relevé et des
+contours allégés — un liseré épais creuse une lettre ronde au lieu de la détourer, ce qui
+avait rendu le titre du menu translucide avant qu'une ombre portée ne le remplace.
+
 **Navigation au clavier** : `↑ ↓` pour se déplacer, `← →` pour régler, `Entrée` pour
 valider, `Échap` pour revenir. Le `+` et le `−` du pavé numérique doublent les flèches de
 réglage — ils disent ce qu'ils font, là où `← →` demandent d'avoir lu le bandeau d'aide.

@@ -49,6 +49,9 @@ namespace SmilyVolley.EditorTools
 
         // L'affiche du jeu, seul asset graphique qui ne soit pas dessiné par code.
         const string SplashFile = "splash-screen.jpg";
+        // Fredoka (SIL Open Font License) : des lettres rondes et pleines, de la même
+        // famille de formes que les blobs et que le logo de l'affiche.
+        const string FontPath = "Assets/Fonts/Fredoka.ttf";
 
         static readonly Color SandColor = new Color(0.93f, 0.82f, 0.58f);
         static readonly Color SandLineColor = new Color(0.78f, 0.66f, 0.44f);
@@ -429,7 +432,7 @@ namespace SmilyVolley.EditorTools
             rect.anchoredPosition = anchoredPosition + extraOffset;
 
             var text = go.AddComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.font = GameFont();
             text.fontSize = fontSize;
             text.alignment = alignment;
             text.color = color ?? Color.white;
@@ -440,10 +443,12 @@ namespace SmilyVolley.EditorTools
 
             if (outlined)
             {
-                // Le contour duplique le glyphe : au-delà de ~3 % du corps il empâte les petits textes.
-                float width = Mathf.Max(1f, fontSize * 0.028f);
+                // Le contour duplique le glyphe : au-delà de ~2 % du corps il empâte les
+                // petits textes et creuse les lettres rondes de la police du jeu. Bleu de
+                // nuit plutôt que noir : sur une plage en plein soleil, le noir pur tranche.
+                float width = Mathf.Max(1f, fontSize * 0.020f);
                 var outline = go.AddComponent<Outline>();
-                outline.effectColor = new Color(0f, 0f, 0f, 0.75f);
+                outline.effectColor = new Color(0.05f, 0.13f, 0.24f, 0.72f);
                 outline.effectDistance = new Vector2(width, -width);
             }
 
@@ -773,6 +778,12 @@ namespace SmilyVolley.EditorTools
         // l'affiche, sous son logo, et l'écran d'options monte sans jamais le recouvrir.
         const float MenuCardBottom = 96f;
 
+        // Le blob curseur. Le cadre suit le rapport du sprite recadré (260 sur 132) :
+        // ajusté au jugé, « conserver les proportions » rétrécissait le blob pour tenir
+        // dans une boîte trop étroite, et il paraissait deux fois trop petit.
+        const float MenuCursorHeight = 44f;
+        const float MenuCursorWidth = MenuCursorHeight * 260f / 132f;
+
         // Colonne de droite d'une ligne de menu, mesurée depuis son bord droit. Le libellé
         // s'arrête avant le − le plus à gauche : les valeurs s'alignent alors toutes sur la
         // même colonne, que la ligne porte des boutons ou non.
@@ -782,6 +793,9 @@ namespace SmilyVolley.EditorTools
         const float MenuValueX = -132f;
         const float MenuValueWidth = 380f;
         const float MenuLabelWidth = 540f;
+        // Les libellés démarrent après la place du blob : c'est là qu'il se pose, et un
+        // libellé qui commencerait plus tôt le recouvrirait.
+        const float MenuLabelX = 104f;
 
         // Palette du menu, reprise de l'affiche et du terrain : ciel bleu, sable crème,
         // bleu profond du logo. L'ancien menu était un voile bleu nuit posé sur un jeu en
@@ -834,9 +848,13 @@ namespace SmilyVolley.EditorTools
                 new Vector2(0.5f, 1f), new Vector2(0f, -64f), new Vector2(MenuWidth, 100f),
                 MenuTitleColor);
             title.fontStyle = FontStyle.Bold;
-            // Le logo de l'affiche porte le même liseré blanc : le titre des autres écrans
-            // le reprend, sinon « OPTIONS » et « PAUSE » viendraient d'un autre jeu.
-            Halo(title, new Color(1f, 1f, 1f, 0.92f), 2);
+            // Une ombre portée plutôt qu'un liseré : le contour dessine la lettre quatre
+            // fois autour d'elle-même et, sur un caractère rond et plein, le blanc lui
+            // mange l'intérieur — le titre paraissait creux. L'ombre le pose sur le ciel
+            // sans y toucher.
+            var titleShadow = title.gameObject.AddComponent<Shadow>();
+            titleShadow.effectColor = new Color(0.06f, 0.20f, 0.34f, 0.30f);
+            titleShadow.effectDistance = new Vector2(0f, -4f);
 
             Text footer = MenuText(root.transform, "Footer", 26, TextAnchor.LowerCenter,
                 new Vector2(0.5f, 0f), new Vector2(0f, 34f), new Vector2(1700f, 44f),
@@ -858,6 +876,8 @@ namespace SmilyVolley.EditorTools
             card.sprite = LoadSprite("panel.png");
             card.type = Image.Type.Sliced;
             card.color = MenuCardColor;
+
+            var cardGroup = cardGo.AddComponent<CanvasGroup>();
 
             // Ombre portée : posée sur du sable clair, une carte crème sans ombre flotte
             // sans qu'on sache si elle est devant ou dans l'illustration.
@@ -888,6 +908,10 @@ namespace SmilyVolley.EditorTools
             var menuRows = new MenuRow[MenuRowCount];
             for (int i = 0; i < MenuRowCount; i++) menuRows[i] = BuildMenuRow(listRect, i);
 
+            // Le blob est créé après les lignes, donc au-dessus d'elles dans la pile de
+            // rendu : il doit se poser sur la carte, pas passer dessous.
+            MenuCursor cursor = BuildMenuCursor(cardGo.transform);
+
             var menu = canvasGo.AddComponent<MenuController>();
             menu.manager = manager;
             menu.gameAudio = audio;
@@ -908,6 +932,8 @@ namespace SmilyVolley.EditorTools
             menu.narrowWidth = MenuNarrowWidth;
             menu.scrollUp = scrollUp;
             menu.scrollDown = scrollDown;
+            menu.cursor = cursor;
+            menu.cardGroup = cardGroup;
         }
 
         /// <summary>
@@ -957,6 +983,33 @@ namespace SmilyVolley.EditorTools
             outline.effectDistance = new Vector2(distance, distance);
         }
 
+        /// <summary>
+        /// Le blob qui désigne la ligne choisie. Il vit dans la marge gauche de la carte,
+        /// à l'aplomb du libellé qui s'écarte pour lui : les deux mouvements se répondent.
+        /// </summary>
+        static MenuCursor BuildMenuCursor(Transform parent)
+        {
+            var go = new GameObject("Cursor", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = new Vector2(0f, 1f);
+            rect.anchorMax = new Vector2(0f, 1f);
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(MenuCursorWidth, MenuCursorHeight);
+            rect.anchoredPosition = new Vector2(MenuCardPadding + MenuCursorWidth * 0.5f, 0f);
+
+            var image = go.AddComponent<Image>();
+            image.sprite = LoadSprite(BlobArt.CursorFile);
+            image.raycastTarget = false;
+            image.preserveAspect = true;
+
+            var cursor = go.AddComponent<MenuCursor>();
+            cursor.rect = rect;
+            cursor.image = image;
+            return cursor;
+        }
+
         static MenuRow BuildMenuRow(RectTransform parent, int index)
         {
             var go = new GameObject("Row" + index, typeof(RectTransform));
@@ -980,11 +1033,11 @@ namespace SmilyVolley.EditorTools
             button.targetGraphic = highlight;
             button.transition = Selectable.Transition.None;
 
-            Text label = MenuText(go.transform, "Label", 32, TextAnchor.MiddleLeft,
-                new Vector2(0f, 0.5f), new Vector2(30f, 0f), new Vector2(MenuLabelWidth, MenuRowHeight),
-                Color.white, new Vector2(0f, 0.5f));
+            Text label = MenuText(go.transform, "Label", 34, TextAnchor.MiddleLeft,
+                new Vector2(0f, 0.5f), new Vector2(MenuLabelX, 0f),
+                new Vector2(MenuLabelWidth, MenuRowHeight), Color.white, new Vector2(0f, 0.5f));
 
-            Text value = MenuText(go.transform, "Value", 32, TextAnchor.MiddleRight,
+            Text value = MenuText(go.transform, "Value", 34, TextAnchor.MiddleRight,
                 new Vector2(1f, 0.5f), new Vector2(MenuValueX, 0f), new Vector2(MenuValueWidth, MenuRowHeight),
                 Color.white, new Vector2(1f, 0.5f));
 
@@ -992,7 +1045,9 @@ namespace SmilyVolley.EditorTools
             row.rect = rect;
             row.highlight = highlight;
             row.label = label;
+            row.labelRect = (RectTransform)label.transform;
             row.value = value;
+            row.valueRect = (RectTransform)value.transform;
             row.button = button;
             row.decrease = BuildMenuStep(go.transform, "Minus", "−", MenuStepMinusX);
             row.increase = BuildMenuStep(go.transform, "Plus", "+", MenuStepPlusX);
@@ -1062,7 +1117,7 @@ namespace SmilyVolley.EditorTools
             rect.anchoredPosition = anchoredPosition;
 
             var text = go.AddComponent<Text>();
-            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.font = GameFont();
             text.fontSize = fontSize;
             text.alignment = alignment;
             text.color = color;
@@ -1086,6 +1141,26 @@ namespace SmilyVolley.EditorTools
             renderer.sortingOrder = sortingOrder;
             return go;
         }
+
+        /// <summary>
+        /// La police de tout le jeu. Arial, qui servait avant, ne dit rien : elle habille
+        /// aussi bien un tableur. Le repli reste possible pour qu'un projet cloné sans le
+        /// fichier de police s'ouvre quand même, avec un texte moins joli mais lisible.
+        /// </summary>
+        static Font GameFont()
+        {
+            if (gameFont != null) return gameFont;
+
+            gameFont = AssetDatabase.LoadAssetAtPath<Font>(FontPath);
+            if (gameFont == null)
+            {
+                Debug.LogWarning("Police introuvable, retour à celle d'Unity : " + FontPath);
+                gameFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            }
+            return gameFont;
+        }
+
+        static Font gameFont;
 
         static Sprite LoadSprite(string fileName)
         {
