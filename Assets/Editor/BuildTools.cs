@@ -213,9 +213,16 @@ namespace SmilyVolley.EditorTools
         }
 
         /// <summary>
-        /// Le dépôt porte-t-il des modifications autres que celles qu'une publication pose
-        /// elle-même ?
+        /// Le dépôt porte-t-il des modifications autres que celles que le build pose lui-même ?
         /// </summary>
+        /// <remarks>
+        /// Trois fichiers sont exclus du constat, parce qu'ils sont des <b>artefacts</b> et non des
+        /// sources : le tampon et le numéro de version, posés juste avant de construire, et la scène,
+        /// que <see cref="SceneBuilder"/> régénère de zéro à chaque build — avec de nouveaux
+        /// identifiants d'objets, donc un diff garanti. Sans ces exclusions, tout build se
+        /// déclarerait issu d'un arbre modifié, y compris sur un dépôt parfaitement propre, et
+        /// l'avertissement qui doit signaler un vrai écart ne voudrait plus rien dire.
+        /// </remarks>
         static bool HasLocalChanges()
         {
             foreach (string line in Git("status --porcelain").Split('\n'))
@@ -228,6 +235,7 @@ namespace SmilyVolley.EditorTools
 
                 if (path.EndsWith("Assets/Resources/build_sha.txt", StringComparison.Ordinal)) continue;
                 if (path.EndsWith("ProjectSettings/ProjectSettings.asset", StringComparison.Ordinal)) continue;
+                if (path.EndsWith("Assets/Scenes/Game.unity", StringComparison.Ordinal)) continue;
 
                 return true;
             }
