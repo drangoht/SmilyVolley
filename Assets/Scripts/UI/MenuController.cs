@@ -122,6 +122,7 @@ namespace SmilyVolley
                 if (rows[i].button != null) rows[i].button.onClick.AddListener(() => OnRowClicked(rowIndex));
                 if (rows[i].decrease != null) rows[i].decrease.onClick.AddListener(() => OnStepClicked(rowIndex, -1));
                 if (rows[i].increase != null) rows[i].increase.onClick.AddListener(() => OnStepClicked(rowIndex, 1));
+                rows[i].hovered = () => OnRowHovered(rowIndex);
             }
         }
 
@@ -321,6 +322,25 @@ namespace SmilyVolley
 
             selected = index;
             Adjust(direction);
+        }
+
+        /// <summary>
+        /// Le curseur survole une ligne : la surbrillance vient l'y trouver. Sans cela, le
+        /// joueur clique sur une ligne alors que la sélection en éclaire une autre, et rien
+        /// ne lui dit lequel des deux repères le jeu écoute.
+        ///
+        /// Le survol est ignoré pendant qu'on attend une touche à affecter : la sélection
+        /// désigne alors la commande en cours de réaffectation, pas un endroit où aller.
+        /// </summary>
+        void OnRowHovered(int rowIndex)
+        {
+            if (!IsOpen || awaitingKey >= 0) return;
+
+            int index = scroll + rowIndex;
+            if (index == selected || !IsValid(index)) return;
+
+            selected = index;
+            Refresh();
         }
 
         void OnRowClicked(int rowIndex)

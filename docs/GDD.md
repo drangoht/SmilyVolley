@@ -508,12 +508,21 @@ réglage — ils disent ce qu'ils font, là où `← →` demandent d'avoir lu l
 Le menu lit le clavier directement, comme le reste du jeu, plutôt que par le système
 d'événements de l'UI : deux façons de lire les touches auraient fini par diverger.
 
-**La souris fait tout aussi.** La molette déplace la sélection ; un délai minimal entre
-deux crans l'empêche de traverser l'écran d'un coup de doigt, et le pas ne dépend pas de
-l'amplitude rapportée — 120 sur une souris, une fraction sur un pavé tactile. Chaque
-ligne réglable porte un `−` et un `+` : sans eux, le clic sur la ligne équivaut à la
-flèche droite et rien ne fait redescendre une valeur. Ces boutons sont enfants de la
-ligne, donc au-dessus de son bandeau : le clic leur revient, pas à elle.
+**La souris fait tout aussi.** La surbrillance suit le curseur : survoler une ligne la
+sélectionne, si bien que pointer une entrée et la choisir deviennent le même geste. Sans
+cela, le joueur cliquait sur une ligne pendant que la surbrillance en éclairait une
+autre, et rien ne lui disait lequel des deux repères le jeu écoutait. Un intertitre ne
+prend jamais la sélection, et le survol est ignoré tant qu'une touche est attendue : la
+surbrillance désigne alors la commande en cours de réaffectation, pas un endroit où
+aller. Le survol d'un `−` ou d'un `+` sélectionne sa ligne, l'événement remontant de
+l'enfant au parent.
+
+La molette déplace aussi la sélection ; un délai minimal entre deux crans l'empêche de
+traverser l'écran d'un coup de doigt, et le pas ne dépend pas de l'amplitude rapportée —
+120 sur une souris, une fraction sur un pavé tactile. Chaque ligne réglable porte un `−`
+et un `+` : sans eux, le clic sur la ligne équivaut à la flèche droite et rien ne fait
+redescendre une valeur. Ces boutons sont enfants de la ligne, donc au-dessus de son
+bandeau : le clic leur revient, pas à elle.
 
 **Tout boucle.** La dernière ligne d'un écran ramène à la première ; le dernier choix
 d'un réglage ramène au premier. Une liste qui bute à son extrémité ne dit pas au joueur

@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace SmilyVolley
@@ -9,7 +10,7 @@ namespace SmilyVolley
     /// une fois par <c>SceneBuilder</c> puis réutilisées d'un écran à l'autre — un menu
     /// qui reconstruit son interface à chaque ouverture génère des déchets pour rien.
     /// </summary>
-    public class MenuRow : MonoBehaviour
+    public class MenuRow : MonoBehaviour, IPointerEnterHandler
     {
         public RectTransform rect;
         public Image highlight;
@@ -20,6 +21,9 @@ namespace SmilyVolley
         [Tooltip("Boutons − et + : montrés sur les seules lignes réglables.")]
         public Button decrease;
         public Button increase;
+
+        /// <summary>Prévenu quand le curseur entre sur la ligne. Posé par <c>MenuController</c>.</summary>
+        [System.NonSerialized] public System.Action hovered;
 
         static readonly Color Selected = new Color(1f, 1f, 1f, 0.16f);
         static readonly Color LabelPlain = new Color(0.90f, 0.93f, 0.96f);
@@ -60,6 +64,13 @@ namespace SmilyVolley
         }
 
         public void Hide() => gameObject.SetActive(false);
+
+        /// <summary>
+        /// Le curseur entre sur la ligne — ou sur son − ou son +, l'événement remontant
+        /// jusqu'ici. La sélection le suit : pointer une entrée et la choisir deviennent
+        /// le même geste, comme au clavier où l'on descend sur la ligne avant de valider.
+        /// </summary>
+        public void OnPointerEnter(PointerEventData eventData) => hovered?.Invoke();
 
         void ShowSteppers(bool visible)
         {
