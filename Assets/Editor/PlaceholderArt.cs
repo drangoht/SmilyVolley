@@ -20,6 +20,12 @@ namespace SmilyVolley.EditorTools
         static readonly Color BallA = new Color(0.98f, 0.85f, 0.30f);
         static readonly Color BallB = new Color(0.99f, 0.99f, 0.97f);
 
+        // Rayons des coins arrondis du menu, en pixels d'interface — les sprites sont
+        // importés à 100 pixels par unité, la référence du canvas, donc un pixel de
+        // texture vaut un pixel d'interface.
+        const int PanelRadius = 36;
+        const int RowRadius = 14;
+
         [MenuItem("Smily Volley/Régénérer les sprites")]
         public static void GenerateAll()
         {
@@ -31,6 +37,13 @@ namespace SmilyVolley.EditorTools
             Save(CreateSky(), "sky.png", new Vector2(0.5f, 0.5f), 32f);
             Save(CreateSquare(), "square.png", new Vector2(0.5f, 0.5f), 8f);
             Save(CreateSpark(), "spark.png", new Vector2(0.5f, 0.5f), PixelsPerUnit);
+
+            // Panneaux du menu, découpés en neuf tranches : la bordure vaut le rayon, si
+            // bien qu'un panneau s'étire à n'importe quelle taille sans déformer ses coins.
+            Save(CreateRounded(PanelRadius), "panel.png", new Vector2(0.5f, 0.5f), 100f,
+                PanelRadius);
+            Save(CreateRounded(RowRadius), "rounded.png", new Vector2(0.5f, 0.5f), 100f,
+                RowRadius);
 
             AssetDatabase.Refresh();
         }
@@ -167,6 +180,36 @@ namespace SmilyVolley.EditorTools
             return Build(w, h, pixels);
         }
 
+        /// <summary>
+        /// Rectangle à coins arrondis, blanc : l'<c>Image</c> qui le porte le teinte ensuite.
+        /// Le carré fait quatre fois le rayon, ce qui laisse un pixel plein au centre de
+        /// chaque bord — la tranche du milieu que le découpage en neuf va étirer.
+        /// </summary>
+        static Texture2D CreateRounded(int radius)
+        {
+            int size = radius * 4;
+            var pixels = new Color[size * size];
+            float half = size * 0.5f;
+            float inner = half - radius;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    // Distance signée à un rectangle arrondi : positive dehors, négative
+                    // dedans. Le demi-pixel de décalage centre l'anticrénelage sur le bord.
+                    float px = Mathf.Abs(x + 0.5f - half) - inner;
+                    float py = Mathf.Abs(y + 0.5f - half) - inner;
+                    float outside = new Vector2(Mathf.Max(px, 0f), Mathf.Max(py, 0f)).magnitude;
+                    float d = outside + Mathf.Min(Mathf.Max(px, py), 0f) - radius;
+
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(0.5f - d));
+                }
+            }
+
+            return Build(size, size, pixels);
+        }
+
         static Texture2D CreateSquare()
         {
             const int size = 8;
@@ -192,7 +235,12 @@ namespace SmilyVolley.EditorTools
             return texture;
         }
 
-        static void Save(Texture2D texture, string fileName, Vector2 pivot, float pixelsPerUnit)
+        /// <param name="border">
+        /// Largeur des tranches de bord, en pixels. Zéro pour un sprite ordinaire ; sinon
+        /// le sprite se découpe en neuf et ses coins gardent leur taille à l'étirement.
+        /// </param>
+        static void Save(Texture2D texture, string fileName, Vector2 pivot, float pixelsPerUnit,
+            int border = 0)
         {
             string path = ArtFolder + "/" + fileName;
             File.WriteAllBytes(path, texture.EncodeToPNG());
@@ -215,6 +263,7 @@ namespace SmilyVolley.EditorTools
             importer.ReadTextureSettings(settings);
             settings.spriteAlignment = (int)SpriteAlignment.Custom;
             settings.spritePivot = pivot;
+            settings.spriteBorder = new Vector4(border, border, border, border);
             importer.SetTextureSettings(settings);
 
             importer.SaveAndReimport();

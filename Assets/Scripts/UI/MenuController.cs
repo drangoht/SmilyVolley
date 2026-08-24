@@ -42,6 +42,23 @@ namespace SmilyVolley
         public Text footerText;
         public MenuRow[] rows;
 
+        [Tooltip("L'affiche du jeu, montrée derrière le menu principal seulement : sur la " +
+                 "pause et les options, c'est le terrain qu'il faut voir.")]
+        public Image splash;
+        [Tooltip("Voile posé sur ce qui est derrière. Il s'efface presque devant l'affiche, " +
+                 "qui n'a rien à cacher, et se referme sur le terrain pour porter le texte.")]
+        public Image veil;
+        [Tooltip("Carte de sable qui porte les lignes. Sa hauteur suit le nombre d'entrées " +
+                 "affichées : un menu de quatre lignes ne doit pas traîner un panneau vide.")]
+        public RectTransform card;
+        public float rowHeight = 52f;
+        public float cardPadding = 26f;
+        [Tooltip("Largeur des lignes quand l'écran porte des réglages : le libellé à gauche, " +
+                 "la valeur et ses boutons à droite.")]
+        public float wideWidth = 1120f;
+        [Tooltip("Largeur des lignes quand l'écran n'a que des entrées à choisir.")]
+        public float narrowWidth = 720f;
+
         [Header("Touches du menu")]
         public Key upKey = Key.UpArrow;
         public Key downKey = Key.DownArrow;
@@ -86,6 +103,11 @@ namespace SmilyVolley
 
             public bool Selectable => Kind != EntryKind.Header;
         }
+
+        // Opacité du voile. Devant l'affiche il ne sert qu'à asseoir la carte ; devant le
+        // terrain il doit délaver assez pour que le texte porte, sans éteindre la plage.
+        const float VeilOverSplash = 0.10f;
+        const float VeilOverField = 0.38f;
 
         static readonly float[] DifficultyValues = { 0.15f, 0.40f, 0.65f, 0.85f, 1.00f };
         static readonly string[] DifficultyNames =
@@ -154,6 +176,7 @@ namespace SmilyVolley
             if (hudCanvas != null) hudCanvas.enabled = false;
 
             Build();
+            Dress();
             SelectFirstSelectable();
             Refresh();
         }
@@ -574,9 +597,64 @@ namespace SmilyVolley
 
         // ------------------------------------------------------------------ affichage
 
+        /// <summary>
+        /// Habille l'écran courant : l'affiche derrière le menu principal, le terrain
+        /// derrière la pause et les options.
+        ///
+        /// Le menu principal n'a pas de partie à montrer, et l'affiche dit le jeu mieux
+        /// qu'un terrain vide ; son logo rend alors le titre écrit inutile. Les deux autres
+        /// écrans arrivent au-dessus d'un match, que le joueur doit continuer à voir — un
+        /// réglage se juge sur ce qu'il change.
+        /// </summary>
+        void Dress()
+        {
+            bool onSplash = current == Screen.Main && splash != null && splash.sprite != null;
+
+            if (splash != null) splash.enabled = onSplash;
+            if (veil != null)
+            {
+                Color color = veil.color;
+                color.a = onSplash ? VeilOverSplash : VeilOverField;
+                veil.color = color;
+            }
+            if (titleText != null) titleText.enabled = !onSplash;
+        }
+
+        /// <summary>
+        /// Ajuste la carte au nombre de lignes réellement affichées : quatre entrées ne
+        /// doivent pas traîner le panneau d'un écran d'options. Elle est ancrée en bas et
+        /// grandit vers le haut, si bien qu'un menu court se pose sous le logo de l'affiche.
+        /// </summary>
+        void FitCard()
+        {
+            if (card == null || rows == null) return;
+
+            int visible = Mathf.Clamp(entries.Count, 1, rows.Length);
+            float width = HasValues() ? wideWidth : narrowWidth;
+
+            card.sizeDelta = new Vector2(width + cardPadding * 2f, visible * rowHeight + cardPadding * 2f);
+            for (int i = 0; i < rows.Length; i++)
+            {
+                if (rows[i] != null && rows[i].rect != null)
+                    rows[i].rect.sizeDelta = new Vector2(width, rowHeight);
+            }
+        }
+
+        /// <summary>L'écran courant affiche-t-il une valeur à droite d'un libellé ?</summary>
+        bool HasValues()
+        {
+            for (int i = 0; i < entries.Count; i++)
+            {
+                if (entries[i].Value != null) return true;
+            }
+            return false;
+        }
+
         void Refresh()
         {
             if (rows == null || rows.Length == 0) return;
+
+            FitCard();
 
             // La sélection reste dans la fenêtre visible : le menu d'options est plus long
             // que l'écran, il faut le faire défiler sous le curseur.

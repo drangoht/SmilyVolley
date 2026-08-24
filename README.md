@@ -18,13 +18,19 @@ où la balle touche le blob.
 2. Ouvrir la scène `Assets/Scenes/Game.unity`
 3. Play
 
-Aucune dépendance externe : tous les sprites sont générés par code au premier build de
-scène. Le projet se clone et se lance tel quel.
+Aucune dépendance externe : les sprites sont générés par code au premier build de scène,
+à la seule exception de l'affiche du menu. Le projet se clone et se lance tel quel.
 
 ## Menu et options
 
 Le jeu s'ouvre sur un menu ; « Jouer » y est déjà sélectionné, une frappe suffit à
 lancer une partie. `Échap` met en pause à tout moment.
+
+L'affiche du jeu (`Assets/Art/splash-screen.jpg`) sert de fond au menu principal : elle
+porte déjà son logo, le titre écrit y est donc masqué. La pause et les options lui
+préfèrent le terrain sous un voile clair — un réglage se juge sur ce qu'il change. Les
+entrées reposent sur une carte de sable dont la hauteur suit le nombre de lignes, et dont
+la largeur se resserre sur les écrans sans réglage.
 
 La navigation est au clavier — `↑ ↓` naviguer, `← →` régler, `Entrée` valider,
 `Échap` revenir. `+` et `−` du pavé numérique doublent `← →`. La souris fait tout

@@ -47,6 +47,9 @@ namespace SmilyVolley.EditorTools
         const string AudioFolder = "Assets/Audio/Kenney";
         const string MusicFolder = "Assets/Audio/Music";
 
+        // L'affiche du jeu, seul asset graphique qui ne soit pas dessiné par code.
+        const string SplashFile = "splash-screen.jpg";
+
         static readonly Color SandColor = new Color(0.93f, 0.82f, 0.58f);
         static readonly Color SandLineColor = new Color(0.78f, 0.66f, 0.44f);
         static readonly Color BorderColor = new Color(0.13f, 0.16f, 0.22f);
@@ -57,6 +60,7 @@ namespace SmilyVolley.EditorTools
             PlaceholderArt.GenerateAll();
             BlobArt.GenerateAll();
             ConfigureAudioImport();
+            ConfigureSplashImport();
 
             var bouncyWall = CreateMaterial("Bouncy", 0.92f);
             var softGround = CreateMaterial("Sand", 0.45f);
@@ -703,6 +707,34 @@ namespace SmilyVolley.EditorTools
             }
         }
 
+        /// <summary>
+        /// Fait de l'affiche un sprite utilisable par l'interface. Elle arrive comme une
+        /// image ordinaire : sans cette passe, Unity l'importe en texture et
+        /// <c>LoadAssetAtPath&lt;Sprite&gt;</c> ne rend rien.
+        ///
+        /// La taille maximale reste haute — l'affiche couvre l'écran entier, la réduire à
+        /// la valeur par défaut la rendrait floue en plein écran.
+        /// </summary>
+        static void ConfigureSplashImport()
+        {
+            string path = PlaceholderArt.ArtFolder + "/" + SplashFile;
+            var importer = AssetImporter.GetAtPath(path) as TextureImporter;
+            if (importer == null)
+            {
+                Debug.LogWarning("Affiche introuvable : " + path);
+                return;
+            }
+
+            if (importer.textureType == TextureImporterType.Sprite
+                && importer.maxTextureSize >= 4096) return;
+
+            importer.textureType = TextureImporterType.Sprite;
+            importer.spriteImportMode = SpriteImportMode.Single;
+            importer.mipmapEnabled = false;
+            importer.maxTextureSize = 4096;
+            importer.SaveAndReimport();
+        }
+
         /// <summary>Charge les variantes 000 à 004 d'une famille de sons du pack Kenney.</summary>
         static AudioClip[] LoadClips(string prefix, int count = 5)
         {
@@ -724,7 +756,19 @@ namespace SmilyVolley.EditorTools
 
         const int MenuRowCount = 14;
         const float MenuRowHeight = 52f;
+        // Largeur des lignes. Les réglages ont besoin de toute la place — libellé à gauche,
+        // valeur et boutons à droite. Un écran d'entrées seules n'en veut pas : une carte
+        // de mille pixels sous quatre mots courts couvre l'affiche pour rien.
         const float MenuWidth = 1120f;
+        const float MenuNarrowWidth = 720f;
+
+        // Le panneau déborde des lignes : sans cette marge, les libellés collent au bord
+        // arrondi et la carte ressemble à un rectangle mal coupé.
+        const float MenuCardPadding = 26f;
+        // Bas du panneau, mesuré depuis le bas de l'écran : juste au-dessus du bandeau
+        // d'aide. Le panneau grandit vers le haut, donc un menu court reste posé en bas de
+        // l'affiche, sous son logo, et l'écran d'options monte sans jamais le recouvrir.
+        const float MenuCardBottom = 96f;
 
         // Colonne de droite d'une ligne de menu, mesurée depuis son bord droit. Le libellé
         // s'arrête avant le − le plus à gauche : les valeurs s'alignent alors toutes sur la
@@ -736,10 +780,22 @@ namespace SmilyVolley.EditorTools
         const float MenuValueWidth = 380f;
         const float MenuLabelWidth = 540f;
 
+        // Palette du menu, reprise de l'affiche et du terrain : ciel bleu, sable crème,
+        // bleu profond du logo. L'ancien menu était un voile bleu nuit posé sur un jeu en
+        // plein soleil — les deux ne se ressemblaient pas.
+        static readonly Color MenuCardColor = new Color(1f, 0.98f, 0.93f, 0.95f);
+        static readonly Color MenuVeilColor = new Color(0.62f, 0.82f, 0.95f, 0.55f);
+        static readonly Color MenuTitleColor = new Color(0.10f, 0.33f, 0.58f);
+        static readonly Color MenuFooterColor = new Color(0.16f, 0.30f, 0.44f);
+        static readonly Color MenuStepTint = new Color(0.16f, 0.52f, 0.80f);
+
         /// <summary>
         /// Menu principal, options et pause, sur un canvas propre posé au-dessus du HUD.
         /// Les lignes sont créées une bonne fois — quatorze suffisent à remplir l'écran —
         /// puis <see cref="MenuController"/> y fait défiler les entrées de l'écran courant.
+        ///
+        /// L'affiche du jeu sert de fond au menu principal ; les options et la pause lui
+        /// préfèrent le terrain sous un voile clair, pour que le joueur voie ce qu'il règle.
         /// </summary>
         static void BuildMenu(GameManager manager, GameAudio audio, BlobController left,
             BlobController right, HudController hud)
@@ -758,33 +814,62 @@ namespace SmilyVolley.EditorTools
 
             var root = new GameObject("Panel", typeof(RectTransform));
             root.transform.SetParent(canvasGo.transform, false);
-            var rootRect = (RectTransform)root.transform;
-            rootRect.anchorMin = Vector2.zero;
-            rootRect.anchorMax = Vector2.one;
-            rootRect.offsetMin = Vector2.zero;
-            rootRect.offsetMax = Vector2.zero;
+            Stretch((RectTransform)root.transform);
 
-            // Voile sombre : le terrain reste lisible derrière, ce qui montre au joueur
-            // ce que ses réglages changent, sans concurrencer le texte.
-            var veil = root.AddComponent<Image>();
-            veil.color = new Color(0.04f, 0.06f, 0.10f, 0.88f);
+            Image splash = BuildSplash(root.transform);
 
-            Text title = MenuText(root.transform, "Title", 76, TextAnchor.UpperCenter,
-                new Vector2(0.5f, 1f), new Vector2(0f, -70f), new Vector2(MenuWidth, 100f),
-                new Color(1f, 1f, 1f, 0.97f));
+            // Voile clair : le terrain reste lisible derrière, ce qui montre au joueur ce
+            // que ses réglages changent, sans concurrencer le texte. Bleu ciel plutôt que
+            // bleu nuit — la plage ne s'éteint pas quand on ouvre le menu.
+            var veilGo = new GameObject("Veil", typeof(RectTransform));
+            veilGo.transform.SetParent(root.transform, false);
+            Stretch((RectTransform)veilGo.transform);
+            var veil = veilGo.AddComponent<Image>();
+            veil.color = MenuVeilColor;
 
-            Text footer = MenuText(root.transform, "Footer", 28, TextAnchor.LowerCenter,
-                new Vector2(0.5f, 0f), new Vector2(0f, 42f), new Vector2(1700f, 44f),
-                new Color(0.70f, 0.78f, 0.88f));
+            Text title = MenuText(root.transform, "Title", 72, TextAnchor.UpperCenter,
+                new Vector2(0.5f, 1f), new Vector2(0f, -64f), new Vector2(MenuWidth, 100f),
+                MenuTitleColor);
+            title.fontStyle = FontStyle.Bold;
+            // Le logo de l'affiche porte le même liseré blanc : le titre des autres écrans
+            // le reprend, sinon « OPTIONS » et « PAUSE » viendraient d'un autre jeu.
+            Halo(title, new Color(1f, 1f, 1f, 0.92f), 2);
+
+            Text footer = MenuText(root.transform, "Footer", 26, TextAnchor.LowerCenter,
+                new Vector2(0.5f, 0f), new Vector2(0f, 34f), new Vector2(1700f, 44f),
+                MenuFooterColor);
+            Halo(footer, new Color(1f, 1f, 1f, 0.75f), 2);
+
+            // Carte de sable sur laquelle les lignes reposent : sans elle, un libellé bleu
+            // passant sur le ciel de l'affiche puis sur une palme change de lisibilité au
+            // milieu du mot.
+            var cardGo = new GameObject("Card", typeof(RectTransform));
+            cardGo.transform.SetParent(root.transform, false);
+            var cardRect = (RectTransform)cardGo.transform;
+            cardRect.anchorMin = new Vector2(0.5f, 0f);
+            cardRect.anchorMax = new Vector2(0.5f, 0f);
+            cardRect.pivot = new Vector2(0.5f, 0f);
+            cardRect.anchoredPosition = new Vector2(0f, MenuCardBottom);
+            cardRect.sizeDelta = new Vector2(MenuWidth + MenuCardPadding * 2f, 400f);
+            var card = cardGo.AddComponent<Image>();
+            card.sprite = LoadSprite("panel.png");
+            card.type = Image.Type.Sliced;
+            card.color = MenuCardColor;
+
+            // Ombre portée : posée sur du sable clair, une carte crème sans ombre flotte
+            // sans qu'on sache si elle est devant ou dans l'illustration.
+            var shadow = cardGo.AddComponent<Shadow>();
+            shadow.effectColor = new Color(0.06f, 0.20f, 0.32f, 0.22f);
+            shadow.effectDistance = new Vector2(0f, -7f);
 
             var listGo = new GameObject("Rows", typeof(RectTransform));
-            listGo.transform.SetParent(root.transform, false);
+            listGo.transform.SetParent(cardGo.transform, false);
             var listRect = (RectTransform)listGo.transform;
-            listRect.anchorMin = new Vector2(0.5f, 0.5f);
-            listRect.anchorMax = new Vector2(0.5f, 0.5f);
+            listRect.anchorMin = new Vector2(0.5f, 1f);
+            listRect.anchorMax = new Vector2(0.5f, 1f);
             listRect.pivot = new Vector2(0.5f, 1f);
             listRect.sizeDelta = new Vector2(MenuWidth, MenuRowCount * MenuRowHeight);
-            listRect.anchoredPosition = new Vector2(0f, MenuRowCount * MenuRowHeight * 0.5f - 30f);
+            listRect.anchoredPosition = new Vector2(0f, -MenuCardPadding);
 
             var menuRows = new MenuRow[MenuRowCount];
             for (int i = 0; i < MenuRowCount; i++) menuRows[i] = BuildMenuRow(listRect, i);
@@ -800,6 +885,60 @@ namespace SmilyVolley.EditorTools
             menu.titleText = title;
             menu.footerText = footer;
             menu.rows = menuRows;
+            menu.splash = splash;
+            menu.veil = veil;
+            menu.card = cardRect;
+            menu.rowHeight = MenuRowHeight;
+            menu.cardPadding = MenuCardPadding;
+            menu.wideWidth = MenuWidth;
+            menu.narrowWidth = MenuNarrowWidth;
+        }
+
+        /// <summary>
+        /// L'affiche du jeu, en fond du menu principal.
+        ///
+        /// <c>EnvelopeParent</c> la fait déborder du cadre plutôt que d'y laisser des
+        /// bandes : l'illustration est cadrée large, elle supporte de perdre un peu de ciel
+        /// ou de sable, mais pas de flotter sur du vide.
+        /// </summary>
+        static Image BuildSplash(Transform parent)
+        {
+            var go = new GameObject("Splash", typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+            Stretch((RectTransform)go.transform);
+
+            var image = go.AddComponent<Image>();
+            image.sprite = LoadSprite(SplashFile);
+            image.raycastTarget = false;
+
+            if (image.sprite != null)
+            {
+                var fitter = go.AddComponent<AspectRatioFitter>();
+                fitter.aspectMode = AspectRatioFitter.AspectMode.EnvelopeParent;
+                fitter.aspectRatio = image.sprite.rect.width / image.sprite.rect.height;
+            }
+
+            return image;
+        }
+
+        static void Stretch(RectTransform rect)
+        {
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.offsetMin = Vector2.zero;
+            rect.offsetMax = Vector2.zero;
+        }
+
+        /// <summary>
+        /// Halo clair autour d'un texte sombre : sur l'affiche, un libellé peut tomber sur
+        /// une palme aussi bien que sur le sable, et seul le détourage le tient lisible
+        /// dans les deux cas.
+        /// </summary>
+        static void Halo(Text text, Color color, int distance)
+        {
+            var outline = text.gameObject.AddComponent<Outline>();
+            outline.effectColor = color;
+            outline.effectDistance = new Vector2(distance, distance);
         }
 
         static MenuRow BuildMenuRow(RectTransform parent, int index)
@@ -817,17 +956,19 @@ namespace SmilyVolley.EditorTools
             // Le bandeau reste présent même transparent : c'est lui qui reçoit les clics
             // souris, et le rendre visible ne demande qu'un changement de couleur.
             var highlight = go.AddComponent<Image>();
+            highlight.sprite = LoadSprite("rounded.png");
+            highlight.type = Image.Type.Sliced;
             highlight.color = Color.clear;
 
             var button = go.AddComponent<Button>();
             button.targetGraphic = highlight;
             button.transition = Selectable.Transition.None;
 
-            Text label = MenuText(go.transform, "Label", 34, TextAnchor.MiddleLeft,
-                new Vector2(0f, 0.5f), new Vector2(34f, 0f), new Vector2(MenuLabelWidth, MenuRowHeight),
+            Text label = MenuText(go.transform, "Label", 32, TextAnchor.MiddleLeft,
+                new Vector2(0f, 0.5f), new Vector2(30f, 0f), new Vector2(MenuLabelWidth, MenuRowHeight),
                 Color.white, new Vector2(0f, 0.5f));
 
-            Text value = MenuText(go.transform, "Value", 34, TextAnchor.MiddleRight,
+            Text value = MenuText(go.transform, "Value", 32, TextAnchor.MiddleRight,
                 new Vector2(1f, 0.5f), new Vector2(MenuValueX, 0f), new Vector2(MenuValueWidth, MenuRowHeight),
                 Color.white, new Vector2(1f, 0.5f));
 
@@ -863,28 +1004,33 @@ namespace SmilyVolley.EditorTools
             rect.anchoredPosition = new Vector2(x, 0f);
 
             var background = go.AddComponent<Image>();
+            background.sprite = LoadSprite("rounded.png");
+            background.type = Image.Type.Sliced;
             background.color = Color.white;
 
             var button = go.AddComponent<Button>();
             button.targetGraphic = background;
             button.transition = Selectable.Transition.ColorTint;
 
-            // Le fond est blanc : c'est la teinte qui porte l'opacité, et donc le survol.
+            // Le fond est blanc : c'est la teinte qui porte la couleur et l'opacité, et
+            // donc le survol.
             ColorBlock colors = button.colors;
-            colors.normalColor = new Color(1f, 1f, 1f, 0.10f);
-            colors.highlightedColor = new Color(1f, 1f, 1f, 0.24f);
-            colors.pressedColor = new Color(1f, 1f, 1f, 0.40f);
+            colors.normalColor = Alpha(MenuStepTint, 0.16f);
+            colors.highlightedColor = Alpha(MenuStepTint, 0.34f);
+            colors.pressedColor = Alpha(MenuStepTint, 0.55f);
             colors.selectedColor = colors.normalColor;
-            colors.disabledColor = new Color(1f, 1f, 1f, 0.04f);
+            colors.disabledColor = Alpha(MenuStepTint, 0.06f);
             colors.fadeDuration = 0.06f;
             button.colors = colors;
 
-            MenuText(go.transform, "Glyph", 36, TextAnchor.MiddleCenter,
+            MenuText(go.transform, "Glyph", 34, TextAnchor.MiddleCenter,
                 new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(MenuStepSize, MenuStepSize),
-                new Color(1f, 0.86f, 0.45f)).text = glyph;
+                MenuTitleColor).text = glyph;
 
             return button;
         }
+
+        static Color Alpha(Color color, float alpha) => new Color(color.r, color.g, color.b, alpha);
 
         static Text MenuText(Transform parent, string name, int fontSize, TextAnchor alignment,
             Vector2 anchor, Vector2 anchoredPosition, Vector2 size, Color color, Vector2? pivot = null)

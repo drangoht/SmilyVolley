@@ -502,6 +502,24 @@ Le temps est arrêté (`Time.timeScale = 0`), ce qui suspend d'un coup les corou
 service, la physique et l'IA. La musique continue : un `AudioSource` ignore l'échelle
 de temps, et le silence brutal à l'ouverture du menu ferait croire à un plantage.
 
+**Le menu est une plage, comme le jeu.** Le terrain est en plein soleil — ciel dégradé,
+sable clair, blobs vert et corail — et le menu était un voile bleu nuit posé dessus : les
+deux ne se ressemblaient pas. Il reprend donc la palette de l'affiche, qui est celle du
+jeu : bleu profond du logo pour les libellés, bleu du ciel pour la surbrillance, ambre du
+sable pour les valeurs, le tout sur une carte crème.
+
+L'affiche elle-même sert de fond au **menu principal**, cadrée en `EnvelopeParent` pour
+déborder plutôt que laisser des bandes ; son logo rendant le titre écrit redondant, celui-ci
+s'efface. La **pause** et les **options** gardent le terrain derrière un voile clair : le
+joueur doit voir ce qu'il règle, et éteindre la plage pour afficher un menu reviendrait à
+lui cacher le jeu qu'il est en train de régler.
+
+La carte qui porte les lignes **s'ajuste à son contenu** : sa hauteur suit le nombre
+d'entrées, et sa largeur se resserre sur un écran sans réglage — mille pixels de panneau
+sous quatre mots courts couvrent l'affiche pour rien. Elle est ancrée en bas et grandit
+vers le haut, si bien qu'un menu court se pose sur le sable, sous le logo, et que l'écran
+d'options monte sans jamais le recouvrir.
+
 **Navigation au clavier** : `↑ ↓` pour se déplacer, `← →` pour régler, `Entrée` pour
 valider, `Échap` pour revenir. Le `+` et le `−` du pavé numérique doublent les flèches de
 réglage — ils disent ce qu'ils font, là où `← →` demandent d'avoir lu le bandeau d'aide.
