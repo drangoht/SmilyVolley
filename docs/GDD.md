@@ -518,7 +518,21 @@ La carte qui porte les lignes **s'ajuste à son contenu** : sa hauteur suit le n
 d'entrées, et sa largeur se resserre sur un écran sans réglage — mille pixels de panneau
 sous quatre mots courts couvrent l'affiche pour rien. Elle est ancrée en bas et grandit
 vers le haut, si bien qu'un menu court se pose sur le sable, sous le logo, et que l'écran
-d'options monte sans jamais le recouvrir.
+d'options monte sans jamais le recouvrir. Une flèche paraît dans sa marge haute ou basse
+quand la liste déborde de ce côté : le menu d'options tient sur une vingtaine d'entrées
+pour quatorze lignes visibles, et un joueur arrivé au bas de ce qu'il voit n'avait aucune
+raison de deviner qu'il restait des réglages.
+
+**L'affiche ouvre aussi le jeu.** Elle remplace le gris d'usine de l'écran de lancement
+d'Unity — c'est la première image du jeu, autant que ce soit la bonne, et l'enchaînement
+sur le menu montre deux fois la même plage. Elle y est déclarée comme **logo**, pas comme
+fond : Unity garde l'image de fond en très basse résolution pour pouvoir la montrer avant
+tout chargement, et l'affiche en ressortait méconnaissable, titre illisible. Ni la taille
+maximale de la texture ni la compression n'y changent rien — essayées en 4096 non
+compressé, le flou est identique. En logo, la même image est nette ; le fond retombe sur
+un aplat de ciel. Le logo Unity reste imposé par la licence Personal, tout comme le voile
+noir derrière les logos, bloqué à 0,5 : le build demande zéro et journalise ce qu'Unity a
+retenu, pour qu'un écran assombri ne passe pas pour un bug.
 
 **Navigation au clavier** : `↑ ↓` pour se déplacer, `← →` pour régler, `Entrée` pour
 valider, `Échap` pour revenir. Le `+` et le `−` du pavé numérique doublent les flèches de

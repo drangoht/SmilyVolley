@@ -712,8 +712,9 @@ namespace SmilyVolley.EditorTools
         /// image ordinaire : sans cette passe, Unity l'importe en texture et
         /// <c>LoadAssetAtPath&lt;Sprite&gt;</c> ne rend rien.
         ///
-        /// La taille maximale reste haute — l'affiche couvre l'écran entier, la réduire à
-        /// la valeur par défaut la rendrait floue en plein écran.
+        /// Les 2048 pixels par défaut suffisent à la montrer plein cadre en 1080p. Monter à
+        /// 4096 sans compression a été essayé pour dégrossir l'écran de lancement : sans
+        /// effet, celui-ci gardant sa propre copie basse résolution (voir <c>BuildTools</c>).
         /// </summary>
         static void ConfigureSplashImport()
         {
@@ -725,13 +726,17 @@ namespace SmilyVolley.EditorTools
                 return;
             }
 
-            if (importer.textureType == TextureImporterType.Sprite
-                && importer.maxTextureSize >= 4096) return;
-
             importer.textureType = TextureImporterType.Sprite;
             importer.spriteImportMode = SpriteImportMode.Single;
             importer.mipmapEnabled = false;
-            importer.maxTextureSize = 4096;
+
+            var platform = importer.GetPlatformTextureSettings("Standalone");
+            if (platform.overridden)
+            {
+                platform.overridden = false;
+                importer.SetPlatformTextureSettings(platform);
+            }
+
             importer.SaveAndReimport();
         }
 
@@ -871,6 +876,17 @@ namespace SmilyVolley.EditorTools
             listRect.sizeDelta = new Vector2(MenuWidth, MenuRowCount * MenuRowHeight);
             listRect.anchoredPosition = new Vector2(0f, -MenuCardPadding);
 
+            // Flèches de défilement, logées dans la marge de la carte : la liste d'options
+            // est plus longue que l'écran, et rien ne le disait — un joueur arrivé en bas
+            // de ce qu'il voit n'a aucune raison de deviner qu'il reste des réglages.
+            Text scrollUp = MenuText(cardGo.transform, "ScrollUp", 24, TextAnchor.UpperCenter,
+                new Vector2(0.5f, 1f), new Vector2(0f, -2f), new Vector2(80f, 26f), MenuStepTint);
+            scrollUp.text = "▲";
+
+            Text scrollDown = MenuText(cardGo.transform, "ScrollDown", 24, TextAnchor.LowerCenter,
+                new Vector2(0.5f, 0f), new Vector2(0f, 2f), new Vector2(80f, 26f), MenuStepTint);
+            scrollDown.text = "▼";
+
             var menuRows = new MenuRow[MenuRowCount];
             for (int i = 0; i < MenuRowCount; i++) menuRows[i] = BuildMenuRow(listRect, i);
 
@@ -892,6 +908,8 @@ namespace SmilyVolley.EditorTools
             menu.cardPadding = MenuCardPadding;
             menu.wideWidth = MenuWidth;
             menu.narrowWidth = MenuNarrowWidth;
+            menu.scrollUp = scrollUp;
+            menu.scrollDown = scrollDown;
         }
 
         /// <summary>

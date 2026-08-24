@@ -58,6 +58,10 @@ namespace SmilyVolley
         public float wideWidth = 1120f;
         [Tooltip("Largeur des lignes quand l'écran n'a que des entrées à choisir.")]
         public float narrowWidth = 720f;
+        [Tooltip("Flèches montrées dans la marge de la carte quand la liste déborde d'un " +
+                 "côté ou de l'autre.")]
+        public Text scrollUp;
+        public Text scrollDown;
 
         [Header("Touches du menu")]
         public Key upKey = Key.UpArrow;
@@ -661,6 +665,9 @@ namespace SmilyVolley
             if (selected < scroll) scroll = selected;
             else if (selected >= scroll + rows.Length) scroll = selected - rows.Length + 1;
             scroll = Mathf.Clamp(scroll, 0, Mathf.Max(0, entries.Count - rows.Length));
+
+            if (scrollUp != null) scrollUp.enabled = scroll > 0;
+            if (scrollDown != null) scrollDown.enabled = scroll + rows.Length < entries.Count;
 
             for (int i = 0; i < rows.Length; i++)
             {
