@@ -712,9 +712,7 @@ namespace SmilyVolley.EditorTools
         /// image ordinaire : sans cette passe, Unity l'importe en texture et
         /// <c>LoadAssetAtPath&lt;Sprite&gt;</c> ne rend rien.
         ///
-        /// Les 2048 pixels par défaut suffisent à la montrer plein cadre en 1080p. Monter à
-        /// 4096 sans compression a été essayé pour dégrossir l'écran de lancement : sans
-        /// effet, celui-ci gardant sa propre copie basse résolution (voir <c>BuildTools</c>).
+        /// Les 2048 pixels par défaut suffisent à la montrer plein cadre en 1080p.
         /// </summary>
         static void ConfigureSplashImport()
         {

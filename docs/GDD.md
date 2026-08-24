@@ -523,16 +523,11 @@ quand la liste déborde de ce côté : le menu d'options tient sur une vingtaine
 pour quatorze lignes visibles, et un joueur arrivé au bas de ce qu'il voit n'avait aucune
 raison de deviner qu'il restait des réglages.
 
-**L'affiche ouvre aussi le jeu.** Elle remplace le gris d'usine de l'écran de lancement
-d'Unity — c'est la première image du jeu, autant que ce soit la bonne, et l'enchaînement
-sur le menu montre deux fois la même plage. Elle y est déclarée comme **logo**, pas comme
-fond : Unity garde l'image de fond en très basse résolution pour pouvoir la montrer avant
-tout chargement, et l'affiche en ressortait méconnaissable, titre illisible. Ni la taille
-maximale de la texture ni la compression n'y changent rien — essayées en 4096 non
-compressé, le flou est identique. En logo, la même image est nette ; le fond retombe sur
-un aplat de ciel. Le logo Unity reste imposé par la licence Personal, tout comme le voile
-noir derrière les logos, bloqué à 0,5 : le build demande zéro et journalise ce qu'Unity a
-retenu, pour qu'un écran assombri ne passe pas pour un bug.
+> **L'écran de lancement reste celui d'Unity.** L'affiche y a été essayée : en fond, elle
+> s'affiche méconnaissable, titre illisible — Unity garde cette image en très basse
+> résolution pour pouvoir la montrer avant tout chargement, et ni la taille maximale de la
+> texture ni la compression n'y changent rien (essayées en 4096 non compressé, le flou est
+> identique). En logo elle est nette, mais l'écran de lancement par défaut a été préféré.
 
 **Navigation au clavier** : `↑ ↓` pour se déplacer, `← →` pour régler, `Entrée` pour
 valider, `Échap` pour revenir. Le `+` et le `−` du pavé numérique doublent les flèches de

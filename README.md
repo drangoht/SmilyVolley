@@ -26,9 +26,8 @@ Aucune dépendance externe : les sprites sont générés par code au premier bui
 Le jeu s'ouvre sur un menu ; « Jouer » y est déjà sélectionné, une frappe suffit à
 lancer une partie. `Échap` met en pause à tout moment.
 
-L'affiche du jeu (`Assets/Art/splash-screen.jpg`) ouvre le jeu — sur l'écran de lancement
-d'Unity, puis en fond du menu principal, où elle porte déjà son logo : le titre écrit y est
-donc masqué. La pause et les options lui
+L'affiche du jeu (`Assets/Art/splash-screen.jpg`) sert de fond au menu principal : elle
+porte déjà son logo, le titre écrit y est donc masqué. La pause et les options lui
 préfèrent le terrain sous un voile clair — un réglage se juge sur ce qu'il change. Les
 entrées reposent sur une carte de sable dont la hauteur suit le nombre de lignes, et dont
 la largeur se resserre sur les écrans sans réglage. Une flèche apparaît dans sa marge quand
