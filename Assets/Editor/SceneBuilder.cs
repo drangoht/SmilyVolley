@@ -105,6 +105,7 @@ namespace SmilyVolley.EditorTools
             BuildEffects(ball, left, right);
             GameAudio audio = BuildAudio(ball, manager, left, right);
             BuildMenu(manager, audio, left, right, hud);
+            BuildStamp();
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -415,6 +416,40 @@ namespace SmilyVolley.EditorTools
                 new Color(0.28f, 0.21f, 0.10f), false);
 
             return hud;
+        }
+
+        /// <summary>
+        /// Tampon de build, en bas à droite.
+        /// </summary>
+        /// <remarks>
+        /// Sur son propre canevas, et non dans le HUD : celui-ci s'éteint dès qu'un menu s'ouvre,
+        /// or c'est du menu que viennent la plupart des captures d'écran. Ordre de tri élevé pour
+        /// qu'il reste lisible par-dessus le voile du menu — un tampon caché ne tamponne rien.
+        /// </remarks>
+        static void BuildStamp()
+        {
+            var canvasGo = new GameObject("BuildStamp");
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 100;
+
+            var scaler = canvasGo.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1920f, 1080f);
+            scaler.matchWidthOrHeight = 0.5f;
+
+            // Encre du sable plutôt que blanc contourné : le coin bas-droit tombe sur la plage
+            // aussi bien au menu qu'en match, et le blanc y était délavé au point de ne plus se lire.
+            Text label = CreateText(canvasGo.transform, "Label", "", 22, TextAnchor.LowerRight,
+                new Vector2(1f, 0f), new Vector2(1f, 0f), new Vector2(-18f, 12f), new Vector2(420f, 34f),
+                Vector2.zero, new Color(0.28f, 0.21f, 0.10f, 0.6f), false);
+
+            // Le pivot par défaut de CreateText centre horizontalement : ancré à droite, le texte
+            // déborderait de la moitié de sa boîte hors de l'écran.
+            var rect = (RectTransform)label.transform;
+            rect.pivot = new Vector2(1f, 0f);
+
+            label.gameObject.AddComponent<BuildStampLabel>();
         }
 
         static Text CreateText(Transform parent, string name, string content, int fontSize, TextAnchor alignment,
@@ -908,13 +943,10 @@ namespace SmilyVolley.EditorTools
             // Flèches de défilement, logées dans la marge de la carte : la liste d'options
             // est plus longue que l'écran, et rien ne le disait — un joueur arrivé en bas
             // de ce qu'il voit n'a aucune raison de deviner qu'il reste des réglages.
-            Text scrollUp = MenuText(cardGo.transform, "ScrollUp", 24, TextAnchor.UpperCenter,
-                new Vector2(0.5f, 1f), new Vector2(0f, -2f), new Vector2(80f, 26f), MenuStepTint);
-            scrollUp.text = "▲";
-
-            Text scrollDown = MenuText(cardGo.transform, "ScrollDown", 24, TextAnchor.LowerCenter,
-                new Vector2(0.5f, 0f), new Vector2(0f, 2f), new Vector2(80f, 26f), MenuStepTint);
-            scrollDown.text = "▼";
+            Image scrollUp = ScrollArrow(cardGo.transform, "ScrollUp", new Vector2(0.5f, 1f),
+                new Vector2(0f, -10f), false);
+            Image scrollDown = ScrollArrow(cardGo.transform, "ScrollDown", new Vector2(0.5f, 0f),
+                new Vector2(0f, 10f), true);
 
             var menuRows = new MenuRow[MenuRowCount];
             for (int i = 0; i < MenuRowCount; i++) menuRows[i] = BuildMenuRow(listRect, i);
@@ -1114,6 +1146,36 @@ namespace SmilyVolley.EditorTools
 
         static Color Alpha(Color color, float alpha) => new Color(color.r, color.g, color.b, alpha);
 
+        /// <summary>
+        /// Flèche de défilement, dans la marge de la carte du menu.
+        /// </summary>
+        /// <remarks>
+        /// Une image et non un texte : la police du jeu ne contient aucun glyphe de flèche. Sur
+        /// Windows le moteur allait chercher « ▲ » dans les polices du système ; un navigateur
+        /// n'en propose aucune, et l'indicateur disparaissait donc dans la version web — c'est-à-
+        /// dire précisément le signe qui dit qu'il reste des réglages plus bas.
+        /// </remarks>
+        static Image ScrollArrow(Transform parent, string name, Vector2 anchor,
+            Vector2 anchoredPosition, bool pointingDown)
+        {
+            var go = new GameObject(name, typeof(RectTransform));
+            go.transform.SetParent(parent, false);
+
+            var rect = (RectTransform)go.transform;
+            rect.anchorMin = anchor;
+            rect.anchorMax = anchor;
+            rect.pivot = new Vector2(0.5f, 0.5f);
+            rect.sizeDelta = new Vector2(22f, 14f);
+            rect.anchoredPosition = anchoredPosition;
+            if (pointingDown) rect.localRotation = Quaternion.Euler(0f, 0f, 180f);
+
+            var image = go.AddComponent<Image>();
+            image.sprite = LoadSprite("triangle.png");
+            image.color = MenuStepTint;
+            image.raycastTarget = false;
+            return image;
+        }
+
         static Text MenuText(Transform parent, string name, int fontSize, TextAnchor alignment,
             Vector2 anchor, Vector2 anchoredPosition, Vector2 size, Color color, Vector2? pivot = null)
         {
@@ -1168,6 +1230,7 @@ namespace SmilyVolley.EditorTools
                 Debug.LogWarning("Police introuvable, retour à celle d'Unity : " + FontPath);
                 gameFont = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
             }
+
             return gameFont;
         }
 

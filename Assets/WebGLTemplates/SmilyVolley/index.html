@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+  <title>{{{ PRODUCT_NAME }}}</title>
+  <meta name="description" content="Le beach volley des Blobs souriants, jouable dans le navigateur.">
+  <link rel="icon" type="image/png" href="TemplateData/favicon.png">
+  <style>
+    /* La police du jeu, pour que la page d'attente ne soit pas d'un autre jeu. */
+    @font-face {
+      font-family: "Fredoka";
+      src: url("TemplateData/Fredoka.ttf") format("truetype");
+      font-display: swap;
+    }
+
+    :root {
+      --sable: #f2ddb4;
+      --ciel: #8fd0f2;
+      --encre: #2c5f86;
+    }
+
+    html, body {
+      margin: 0;
+      height: 100%;
+      overflow: hidden;
+      background: var(--ciel);
+      font-family: "Fredoka", system-ui, sans-serif;
+      color: var(--encre);
+    }
+
+    /* Le jeu est cadré en 16/9 : le fond déborde derrière, il ne doit donc pas
+       être noir — une bande noire autour d'une plage se voit comme un défaut. */
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(#8fd0f2 0%, #bfe6f7 55%, var(--sable) 100%);
+    }
+
+    canvas {
+      display: block;
+      background: var(--ciel);
+      /* Sans cela le navigateur lisse le rendu au redimensionnement. */
+      image-rendering: auto;
+      outline: none;
+    }
+
+    /* -------------------------------------------------------------- attente */
+
+    .voile {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 1.4rem;
+      padding-bottom: 12vh;
+      background: url("TemplateData/affiche.jpg") center / cover no-repeat;
+      transition: opacity 0.4s ease;
+    }
+
+    .voile.parti {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .carte {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.9rem;
+      padding: 1.2rem 2.4rem;
+      border-radius: 22px;
+      background: rgba(255, 250, 240, 0.88);
+      box-shadow: 0 10px 30px rgba(20, 60, 90, 0.18);
+    }
+
+    .titre {
+      margin: 0;
+      font-size: 1.35rem;
+      letter-spacing: 0.02em;
+    }
+
+    .barre {
+      width: min(60vw, 380px);
+      height: 12px;
+      border-radius: 999px;
+      background: rgba(44, 95, 134, 0.16);
+      overflow: hidden;
+    }
+
+    .jauge {
+      height: 100%;
+      width: 0;
+      border-radius: 999px;
+      background: linear-gradient(90deg, #6fc46f, #4aa3df);
+      transition: width 0.15s ease;
+    }
+
+    .note {
+      margin: 0;
+      font-size: 0.95rem;
+      opacity: 0.75;
+    }
+
+    /* Message d'erreur : discret, mais lisible sans ouvrir la console. */
+    .alerte {
+      position: fixed;
+      left: 50%;
+      bottom: 1.2rem;
+      transform: translateX(-50%);
+      max-width: min(90vw, 700px);
+      padding: 0.7rem 1.1rem;
+      border-radius: 14px;
+      background: rgba(255, 244, 214, 0.95);
+      box-shadow: 0 6px 18px rgba(20, 60, 90, 0.2);
+      font-size: 0.9rem;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <canvas id="unity-canvas" width="{{{ WIDTH }}}" height="{{{ HEIGHT }}}" tabindex="-1"></canvas>
+
+  <div class="voile" id="attente">
+    <div class="carte">
+      <p class="titre" id="etat">Chargement de la plage…</p>
+      <div class="barre"><div class="jauge" id="jauge"></div></div>
+      <p class="note" id="commandes">Joueur 1 : A / D / W &nbsp;—&nbsp; Joueur 2 : ← / → / ↑</p>
+    </div>
+  </div>
+
+  <div class="alerte" id="alerte"></div>
+
+  <!-- ?v=__BUILD_ID__ : posé par le build. Sans lui, le navigateur ressert le chargeur
+       d'un build et le wasm d'un autre — un mélange qui ne ressemble pas à un cache,
+       mais à un jeu cassé. -->
+  <script src="Build/{{{ LOADER_FILENAME }}}?v=__BUILD_ID__"></script>
+  <script>
+    var canvas = document.querySelector("#unity-canvas");
+    var attente = document.querySelector("#attente");
+    var jauge = document.querySelector("#jauge");
+    var etat = document.querySelector("#etat");
+    var alerte = document.querySelector("#alerte");
+
+    // Le jeu est composé pour du 16/9 : on garde ce cadre et on centre, plutôt
+    // que d'étirer la plage à la fenêtre.
+    var ratio = {{{ WIDTH }}} / {{{ HEIGHT }}};
+
+    function cadrer() {
+      var largeur = window.innerWidth;
+      var hauteur = window.innerHeight;
+      if (largeur / hauteur > ratio) largeur = Math.round(hauteur * ratio);
+      else hauteur = Math.round(largeur / ratio);
+      canvas.style.width = largeur + "px";
+      canvas.style.height = hauteur + "px";
+    }
+
+    cadrer();
+    window.addEventListener("resize", cadrer);
+
+    // Les touches du jeu font défiler la page si on les laisse au navigateur :
+    // la barre d'espace saute d'un écran, les flèches suivent le curseur.
+    var confisquees = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "Tab"];
+    window.addEventListener("keydown", function (e) {
+      if (confisquees.indexOf(e.key) >= 0) e.preventDefault();
+    }, { passive: false });
+
+    // Un navigateur ne laisse pas un son démarrer avant que la page ait été
+    // touchée. Unity ouvre son contexte audio suspendu : sans ce réveil, la
+    // musique du menu ne se déclenche qu'au hasard d'un clic.
+    function reveillerAudio() {
+      var ctx = window.WEBAudio && window.WEBAudio.audioContext;
+      if (ctx && ctx.state !== "running") ctx.resume();
+    }
+    ["pointerdown", "keydown"].forEach(function (nom) {
+      window.addEventListener(nom, reveillerAudio);
+    });
+
+    // Le clavier ne parvient au jeu que si la toile a le focus.
+    function donnerLeClavier() { canvas.focus(); }
+    window.addEventListener("pointerdown", donnerLeClavier);
+    window.addEventListener("focus", donnerLeClavier);
+
+    function signaler(message, type) {
+      if (type === "error") {
+        alerte.textContent = message;
+        alerte.style.display = "block";
+      }
+      console.log(message);
+    }
+
+    var config = {
+      dataUrl: "Build/{{{ DATA_FILENAME }}}?v=__BUILD_ID__",
+      frameworkUrl: "Build/{{{ FRAMEWORK_FILENAME }}}?v=__BUILD_ID__",
+      codeUrl: "Build/{{{ CODE_FILENAME }}}?v=__BUILD_ID__",
+      streamingAssetsUrl: "StreamingAssets",
+      companyName: "{{{ COMPANY_NAME }}}",
+      productName: "{{{ PRODUCT_NAME }}}",
+      productVersion: "{{{ PRODUCT_VERSION }}}",
+      showBanner: signaler,
+    };
+
+    createUnityInstance(canvas, config, function (avancement) {
+      jauge.style.width = (avancement * 100) + "%";
+      if (avancement > 0.9) etat.textContent = "On gonfle le ballon…";
+    }).then(function (instance) {
+      window.jeu = instance;
+      attente.classList.add("parti");
+      donnerLeClavier();
+      reveillerAudio();
+    }).catch(function (erreur) {
+      etat.textContent = "Le jeu n'a pas pu démarrer.";
+      signaler(erreur, "error");
+    });
+  </script>
+</body>
+</html>

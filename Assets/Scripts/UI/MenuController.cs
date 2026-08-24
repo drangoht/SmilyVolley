@@ -58,10 +58,11 @@ namespace SmilyVolley
         public float wideWidth = 1120f;
         [Tooltip("Largeur des lignes quand l'écran n'a que des entrées à choisir.")]
         public float narrowWidth = 720f;
-        [Tooltip("Flèches montrées dans la marge de la carte quand la liste déborde d'un " +
-                 "côté ou de l'autre.")]
-        public Text scrollUp;
-        public Text scrollDown;
+        [Tooltip("Flèches montrées dans la marge de la carte quand la liste déborde d'un côté " +
+                 "ou de l'autre. Des images, non du texte : la police du jeu n'a aucun glyphe de " +
+                 "flèche, et un navigateur n'a pas de police système pour l'y suppléer.")]
+        public Graphic scrollUp;
+        public Graphic scrollDown;
         [Tooltip("Le blob qui montre la ligne choisie, à la place d'un bandeau.")]
         public MenuCursor cursor;
         [Tooltip("Porte le fondu d'ouverture de la carte.")]
@@ -299,7 +300,7 @@ namespace SmilyVolley
         void HandleDirection(Keyboard keyboard)
         {
             // Le pavé numérique double les flèches de réglage : « + » et « − » disent
-            // ce qu'ils font, là où « ← → » demandent d'avoir lu le bandeau d'aide.
+            // ce qu'ils font, là où les flèches demandent d'avoir lu le bandeau d'aide.
             Key pressed = Key.None;
             if (keyboard[upKey].isPressed) pressed = upKey;
             else if (keyboard[downKey].isPressed) pressed = downKey;
@@ -789,11 +790,11 @@ namespace SmilyVolley
             return current switch
             {
                 Screen.Options =>
-                    "↑ ↓ molette : naviguer   —   ← → + − : régler   —   Entrée : valider   —   Échap : retour",
+                    "Haut/Bas ou molette : naviguer   —   Gauche/Droite ou + − : régler   —   Entrée : valider   —   Échap : retour",
                 Screen.Pause =>
-                    "↑ ↓ molette : naviguer   —   Entrée : valider   —   Échap : reprendre",
+                    "Haut/Bas ou molette : naviguer   —   Entrée : valider   —   Échap : reprendre",
                 _ =>
-                    "↑ ↓ molette : naviguer   —   Entrée : valider",
+                    "Haut/Bas ou molette : naviguer   —   Entrée : valider",
             };
         }
     }

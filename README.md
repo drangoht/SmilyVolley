@@ -266,7 +266,7 @@ Assets/
 │   ├── BlobArt.cs             Dessine la peau des blobs et ses matériaux
 │   ├── SceneBuilder.cs        Assemble toute la scène de jeu
 │   ├── RenderPipelineSetup.cs Active URP sur tous les niveaux de qualité
-│   └── BuildTools.cs          Build Windows + réglages projet
+│   └── BuildTools.cs          Builds Windows et web, réglages projet, tampon de build
 ├── Scenes/Game.unity
 └── Scripts/             → assembly SmilyVolley
     ├── Core/            GameManager, GameSettings, BlobStyle, CameraFitter, Side
@@ -289,6 +289,7 @@ la recompilation du jeu.
 - **Régénérer la peau des blobs** — redessine les deux textures (une par joueur, une
   tuile par style) et reconfigure leurs matériaux.
 - **Compiler le build Windows** — produit `Build/Windows/SmilyVolley.exe`.
+- **Compiler la version web** — produit `Build/Web`, le dossier jouable dans un navigateur.
 - **Activer le pipeline URP** — réassigne `Assets/Settings/UniversalRP.asset` sur tous les
   niveaux de qualité. Unity range le pipeline actif dans `QualitySettings` niveau par niveau :
   ne renseigner que le pipeline par défaut de `GraphicsSettings` laisserait les autres en Built-in.
@@ -313,6 +314,68 @@ Le binaire produit se lance en fenêtré :
 ```powershell
 .\Build\Windows\SmilyVolley.exe -screen-width 1280 -screen-height 720 -screen-fullscreen 0
 ```
+
+## La version web
+
+`RebuildWeb` remplace `RebuildEverything` pour produire `Build/Web`, à servir tel quel :
+
+```powershell
+& "C:\Program Files\Unity\Hub\Editor\6000.5.6f1\Editor\Unity.exe" `
+  -batchmode -quit `
+  -projectPath "C:\CODE\JEUX\Smily-Volley" `
+  -executeMethod SmilyVolley.EditorTools.BuildTools.RebuildWeb `
+  -logFile "$env:TEMP\smilyvolley-web.log"
+
+python -m http.server 8123 --directory Build\Web   # http://127.0.0.1:8123
+```
+
+> Le jeu ne se lance pas depuis un `file://` : le chargeur d'Unity va chercher ses fichiers
+> en HTTP. Un serveur local, même minimal, est indispensable pour l'essayer.
+
+La page hôte est le gabarit `Assets/WebGLTemplates/SmilyVolley`. Elle fait trois choses
+qu'aucun réglage d'Unity ne fait :
+
+- **elle garde le cadre 16/9** et centre le jeu sur un fond de plage, plutôt que d'étirer
+  la plage à la fenêtre ;
+- **elle confisque les touches que le navigateur détourne** — l'espace fait défiler la page
+  d'un écran, les flèches suivent le curseur ;
+- **elle réveille le contexte audio** au premier clic : un navigateur n'ouvre le son qu'après
+  un geste du joueur, et sans cela la musique du menu ne démarre qu'au hasard d'une frappe.
+
+Les réglages du lecteur (Brotli avec repli JS, cache des données, stripping bas, taille de
+toile) sont posés par `BuildTools.ApplyWebSettings`, jamais à la main dans l'éditeur.
+
+> **La police du jeu n'a aucune flèche.** Fredoka ne contient ni « ← ↑ → ↓ » ni « ▲ ▼ ».
+> Sur Windows, le moteur allait les chercher dans les polices du système ; un navigateur n'en
+> propose aucune, et le build web perdait donc en silence les flèches des bandeaux d'aide et
+> les indicateurs de défilement du menu. Les textes disent maintenant « Haut/Bas », et les
+> indicateurs sont un sprite dessiné par `PlaceholderArt`.
+
+### Le tampon de build
+
+Le coin bas-droit affiche `v<version>-<sha>` : la version du projet et le commit dont le build
+est issu, posé par `BuildTools.StampGitSha` **à chaque compilation**. Un `+` signale un arbre
+de travail modifié — le build ne correspond alors à aucun commit — et `dev` avoue que git n'a
+rien pu dire. Ce n'est pas pour le joueur : c'est ce qui permet à une capture d'écran de dire
+quelle version elle montre, ce qui compte double sur une page web, où un navigateur ressert
+volontiers un ancien fichier depuis son cache.
+
+### Publier sur itch.io
+
+```powershell
+& "tools/release_itch.ps1" -Version 1.0.0 -DryRun   # va jusqu'au staging, ne publie rien
+& "tools/release_itch.ps1" -Version 1.0.0
+```
+
+Le script pose le numéro de version, rebâtit, **vérifie que le tampon du build porte bien la
+version demandée**, prépare un dossier de distribution propre et le pousse avec `butler` sur
+le canal `html5` de [`drangoht/smily-volley`](https://drangoht.itch.io/smily-volley). Le nom
+du canal n'est pas décoratif : `html5` est ce qui rend le fichier **jouable dans le
+navigateur** ; sur n'importe quel autre nom, le même build se téléchargerait, sans que rien
+ne le signale.
+
+Le contenu de la fiche (accroche, description, tags, images) vit dans
+[`docs/ITCH_STORE_PAGE.md`](docs/ITCH_STORE_PAGE.md), les images dans `docs/itch/`.
 
 ## Rendu
 

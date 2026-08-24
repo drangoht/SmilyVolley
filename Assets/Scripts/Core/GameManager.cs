@@ -186,7 +186,7 @@ namespace SmilyVolley
 
             return rightPlayerIsAi
                 ? $"{move} : se déplacer   —   {jump} : sauter   —   {toggle} : 2 joueurs   —   {restart} : rejouer"
-                : $"J1 : {move} + {jump}      J2 : ← / → + ↑      {toggle} : contre l'ordinateur   —   {restart} : rejouer";
+                : $"J1 : {move} + {jump}      J2 : Gauche / Droite + Haut      {toggle} : contre l'ordinateur   —   {restart} : rejouer";
         }
 
         public void ResetMatch()

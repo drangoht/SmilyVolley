@@ -12,6 +12,14 @@
 [Rr]ecordings/
 [Aa]rtifacts/
 
+# Tampon de build : ecrit par BuildTools a chaque compilation, il decrit l'artefact et non
+# la source. Le versionner rendrait le depot modifie apres chaque build.
+/[Aa]ssets/[Rr]esources/build_sha.txt
+/[Aa]ssets/[Rr]esources/build_sha.txt.meta
+
+# Artefact Burst depose a la racine par le build WebGL, hors de tout dossier de build.
+/Data/
+
 # Caches d'outils Unity
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*

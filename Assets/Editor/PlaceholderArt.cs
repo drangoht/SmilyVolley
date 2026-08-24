@@ -38,6 +38,12 @@ namespace SmilyVolley.EditorTools
             Save(CreateSquare(), "square.png", new Vector2(0.5f, 0.5f), 8f);
             Save(CreateSpark(), "spark.png", new Vector2(0.5f, 0.5f), PixelsPerUnit);
 
+            // Flèche de défilement du menu. Dessinée plutôt qu'écrite : la police du jeu ne
+            // contient aucun glyphe de flèche, et le navigateur n'a pas de police système pour
+            // l'y suppléer — le triangle « ▲ » disparaissait donc, sans rien laisser, dans la
+            // version web.
+            Save(CreateTriangle(), "triangle.png", new Vector2(0.5f, 0.5f), 100f);
+
             // Panneaux du menu, découpés en neuf tranches : la bordure vaut le rayon, si
             // bien qu'un panneau s'étire à n'importe quelle taille sans déformer ses coins.
             Save(CreateRounded(PanelRadius), "panel.png", new Vector2(0.5f, 0.5f), 100f,
@@ -204,6 +210,35 @@ namespace SmilyVolley.EditorTools
                     float d = outside + Mathf.Min(Mathf.Max(px, py), 0f) - radius;
 
                     pixels[y * size + x] = new Color(1f, 1f, 1f, Mathf.Clamp01(0.5f - d));
+                }
+            }
+
+            return Build(size, size, pixels);
+        }
+
+        /// <summary>Triangle plein pointant vers le haut, anticrénelé sur ses trois bords.</summary>
+        static Texture2D CreateTriangle()
+        {
+            const int size = 32;
+            var pixels = new Color[size * size];
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    // Coordonnées centrées, y vers le haut, dans [-1, 1].
+                    float u = (x + 0.5f) / size * 2f - 1f;
+                    float v = (y + 0.5f) / size * 2f - 1f;
+
+                    // Distance signée aux trois côtés : le triangle est l'intersection du bas
+                    // et des deux obliques. Le facteur 0,5 remet la pente à l'échelle du pixel.
+                    float bottom = -1f - v;
+                    float right = (u + v) * 0.70710678f;
+                    float left = (-u + v) * 0.70710678f;
+                    float d = Mathf.Max(bottom, Mathf.Max(right, left));
+
+                    float alpha = Mathf.Clamp01(0.5f - d * size * 0.5f);
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
                 }
             }
 
