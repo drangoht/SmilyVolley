@@ -6,6 +6,10 @@
 >
 > Page : <https://drangoht.itch.io/smily-volley> — **publique depuis le 24 août 2026**, en
 > **version web uniquement**, poussée sur le canal `html5` par `tools/release_itch.ps1`.
+>
+> ⚠ **La page elle-même est en ANGLAIS depuis la 1.1.0** (2026-08-25) : le texte réellement
+> collé est celui de [`ITCH_STORE_PAGE_EN.md`](ITCH_STORE_PAGE_EN.md). Ce fichier-ci reste la
+> référence française — **toute correction se fait DANS LES DEUX**, sans quoi l'un des deux ment.
 
 ---
 
@@ -125,6 +129,8 @@ Toutes dans `docs/itch/`, régénérées depuis le jeu qui tourne :
 | `screen-2-match.png` | Un échange en cours, score affiché |
 | `screen-3-smash.png` | Un blob en l'air au-dessus de la balle |
 | `screen-4-options.png` | L'écran d'options, pour montrer ce qui se règle |
+| `screen-5-touch-2players.jpg` | Les commandes tactiles à deux, chacun son bord (devlog 1.1.0) |
+| `screen-6-touch-solo.jpg` | Les commandes tactiles en solo, écartées aux deux bouts (devlog 1.1.0) |
 
 ---
 

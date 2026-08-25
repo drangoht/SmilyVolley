@@ -8,6 +8,11 @@
 > `tools/release_itch.ps1`.
 >
 > **Up to date for 1.1.0** (2026-08-25), the touch release.
+>
+> ✅ **PUBLISHED**: this English copy is live on the page since 2026-08-25 (build #1915521 on
+> the `html5` channel). The page description, tagline, tags, embed options and the whole
+> Classification tab were set from this file, and the devlog below was posted as
+> [« Now playable with your fingers »](https://drangoht.itch.io/smily-volley/devlog/1640647/now-playable-with-your-fingers-two-players-on-one-phone).
 
 ---
 
@@ -107,7 +112,9 @@ button on their own side, plus a pause button in the top-right corner.
 | Uploads | web folder pushed by butler to the `html5` channel, "play in browser" ticked |
 | Viewport | **1280 × 720**, 16/9 frame over a beach backdrop; on mobile the page goes fullscreen |
 | Fullscreen button | enabled |
-| Mobile friendly | **yes** — landscape only, on-screen touch controls, 1 and 2 players |
+| Mobile friendly | **yes** — the `Mobile friendly` embed box, which was UNTICKED until 1.1.0 |
+| Orientation | **Landscape** — the embed option, matching the game's own orientation gate |
+| Player count | **1 – 2**, Local multiplayer — it read "1 – 1, single-player" until 1.1.0 |
 | Genre | Sports |
 | Made with | Unity |
 | Average session | A few minutes |
