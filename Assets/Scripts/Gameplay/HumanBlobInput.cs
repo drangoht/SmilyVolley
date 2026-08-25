@@ -61,8 +61,7 @@ namespace SmilyVolley
             {
                 // Le doigt est lu d'abord et rend la main s'il ne demande rien : sur une tablette
                 // avec clavier, les deux périphériques cohabitent, et aucun ne doit annuler l'autre.
-                float touch = TouchInput.Horizontal(side);
-                if (touch != 0f) return Mathf.Clamp(touch, -1f, 1f);
+                if (TouchInput.HasMoveTarget(side)) return TowardsFinger();
 
                 if (!EnsureBound()) return 0f;
 
@@ -72,6 +71,56 @@ namespace SmilyVolley
                 return h;
             }
         }
+
+        /// <summary>
+        /// Le blob court vers l'endroit du terrain que le doigt désigne.
+        /// </summary>
+        /// <remarks>
+        /// <para><b>Le doigt pointe le terrain, pas une direction.</b> Sa position écran est
+        /// reconvertie en un point du monde par la caméra : le joueur touche donc <i>littéralement</i>
+        /// l'endroit où il veut son blob, sans qu'aucune correspondance ni aucune sensibilité n'ait
+        /// été inventée. Les deux camps occupent chacun leur moitié d'écran, qui est déjà leur
+        /// moitié de terrain — la correspondance est gratuite.</para>
+        ///
+        /// <para><b>La vitesse reste celle du clavier.</b> Ce qui est publié est un axe borné à
+        /// ±1, exactement comme une touche : le <see cref="BlobController"/> le multiplie par
+        /// <c>moveSpeed</c>, et un doigt qui traverse l'écran d'un geste ne fait pas courir le blob
+        /// plus vite qu'une touche maintenue. Sans cette borne, le tactile serait <b>plus fort</b>
+        /// que le clavier, et les deux modes ne se joueraient plus au même jeu.</para>
+        ///
+        /// <para>⚠ L'axe est <b>dosé sur la dernière ligne droite</b> plutôt que rabattu à ±1
+        /// jusqu'au contact : à pleine vitesse, le blob dépasse le point visé d'un demi-pas, revient,
+        /// le dépasse encore — il vibre autour du doigt au lieu de s'y arrêter. Le pas de physique
+        /// est la bonne unité pour ce dernier segment, puisque c'est exactement la distance que le
+        /// blob va parcourir.</para>
+        /// </remarks>
+        float TowardsFinger()
+        {
+            if (cachedCamera == null) cachedCamera = Camera.main;
+            if (blob == null) blob = GetComponent<BlobController>();
+            if (cachedCamera == null || blob == null) return 0f;
+
+            // La caméra est orthographique : seule l'abscisse du résultat compte, et elle ne dépend
+            // pas de la profondeur passée.
+            float targetX = cachedCamera.ScreenToWorldPoint(
+                new Vector3(TouchInput.MoveScreenX(side), 0f, 0f)).x;
+
+            float gap = targetX - blob.Center.x;
+
+            // La distance que le blob franchira au prochain pas de physique : en deçà, il doit
+            // ralentir pour se poser dessus plutôt que de le dépasser.
+            float reach = blob.moveSpeed * Time.fixedDeltaTime;
+            if (reach <= Mathf.Epsilon) return 0f;
+
+            return Mathf.Clamp(gap / reach, -1f, 1f);
+        }
+
+        // Résolus paresseusement plutôt qu'au réveil : ce composant est désactivé sur le blob de
+        // droite en mode contre l'ordinateur, et réactivé à la volée par le changement de mode.
+        // Camera.main parcourt les objets tagués, on ne le rappelle donc que si la référence a été
+        // perdue.
+        Camera cachedCamera;
+        BlobController blob;
 
         public override bool JumpHeld
             => TouchInput.JumpHeld(side) || (EnsureBound() && IsPressed(jump, altJump));

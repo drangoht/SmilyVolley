@@ -49,6 +49,36 @@ menu ramène à la première, et le dernier choix d'un réglage ramène au premi
 prolongé répète sur les deux volumes, qui sont des échelles ; sur un réglage à choix il
 ne répète pas, sans quoi la liste tournerait sans qu'on puisse s'arrêter dessus.
 
+**Au doigt, on fait défiler en glissant.** Le défilement de ce menu
+n'existe pas séparément : la fenêtre visible se déduit de la ligne courante, que seuls le
+clavier et la molette déplaçaient. Sur un téléphone il n'y a ni l'un ni l'autre — le joueur
+touchait les lignes affichées et **rien au monde** ne lui donnait accès aux suivantes, si
+bien que la moitié des réglages était hors d'atteinte.
+
+**Et les deux flèches de débordement se touchent** : un appui fait défiler de trois lignes.
+Elles ne faisaient qu'*annoncer* que la liste continue, ce qui suffisait tant qu'on avait une
+molette ; au doigt, une indication qu'on ne peut pas toucher ne fait que désigner ce qu'on
+n'atteint pas. Leur cible sensible est bien plus large que le dessin — le triangle fait
+quatorze pixels de haut, soit le tiers d'un doigt.
+
+> Le glissement lit la dalle directement (`TouchInput.ConsumeMenuDragY`) au lieu de passer par
+> l'`IDragHandler` d'uGUI, qui fut la première version. Le glissement d'uGUI ne naît que si le
+> pointeur **bouge après** avoir été enfoncé, sur des images distinctes : tout ce qui enfonce et
+> déplace dans la même image ne franchit jamais son seuil et n'envoie rien. Le composant vivait,
+> ses nombres étaient bons, et il ne recevait aucun événement — constaté en affichant ses
+> compteurs à l'écran, faute de journal lisible dans un build de production (⚠ les `Debug.Log`
+> du code managé n'y remontent pas, alors que ceux du moteur, si).
+>
+> ⚠ Un second défaut se cachait derrière : `SetGameControls(false)` est appelé **à chaque
+> image** tant qu'un menu est ouvert — ce n'est pas une transition, c'est un état réaffirmé — et
+> il remettait le glissement à zéro juste avant que le menu ne le lise. La liste ne bougeait pas
+> d'un pixel sous un doigt qui la parcourait.
+>
+> ⚠ **Le glissement reste invérifiable depuis un navigateur piloté** : l'outil place le curseur
+> *avant* d'enfoncer, si bien qu'aucun mécanisme fondé sur un déplacement ne voit jamais rien.
+> C'est aussi pourquoi le déplacement des blobs vise une position **absolue** et non un delta —
+> lui se vérifie. Les flèches, elles, sont des boutons : un simple appui les prouve.
+
 | Section | Réglages |
 |---|---|
 | **Commandes** | Les six touches, réaffectables une à une, plus un retour à l'origine |
@@ -95,49 +125,57 @@ jeu en attente (`OrientationGate`). Le terrain fait plus de seize unités de lar
 hauteur, les blobs deviendraient des pastilles et les commandes se poseraient par-dessus le
 sable. Ce n'est pas une mise en page à réagencer, c'est le champ de vision.
 
-Chaque joueur a **trois boutons** : un pavé directionnel d'un seul tenant et un bouton de
-saut. L'agencement suit le mode de jeu, parce que le nombre de mains disponibles n'est pas
-le même :
+**Le blob suit le doigt.** Chaque joueur glisse dans sa moitié d'écran : le point touché
+désigne l'endroit du terrain où il veut être, et son blob y court. La position à l'écran est
+reconvertie en point du monde par la caméra, si bien que le doigt pointe *littéralement*
+l'endroit visé — les deux camps occupent déjà chacun leur moitié d'écran, la correspondance
+est gratuite. Il ne reste qu'**un seul bouton** par joueur : le saut, au coin.
 
 ```
 2 JOUEURS (chacun sa moitié)          1 JOUEUR (contre l'ordinateur)
 ┌──────────────────────────┐          ┌──────────────────────────┐
 │  0 - 0            [ ⏸ ]  │          │  0 - 0            [ ⏸ ]  │
+│   ~glisser~ | ~glisser~  │          │      ~glisser~           │
 │      ( )    |    ( )     │          │      ( )    |    ( )     │
-│ [◀][▶] (^)      (^) [◀][▶]│          │ [ ◀ ][ ▶ ]        ( ^ )  │
+│ (^)                 (^)  │          │                    ( ^ ) │
 └──────────────────────────┘          └──────────────────────────┘
    J1              J2                  pouce gauche    pouce droit
 ```
 
-- Le pavé est **d'un seul tenant** : la frontière est au milieu, et glisser d'un côté à
-  l'autre sans lever le pouce change de direction. Deux boutons séparés par un vide
-  obligeraient à viser, et ce vide est exactement l'endroit où le doigt tombe en pleine
-  course.
-- Le camp de droite garde « gauche à gauche ». Refléter les commandes parce que le joueur
-  est assis à droite est un piège classique : le blob, lui, ne s'est pas retourné.
-- Les zones **sensibles débordent du dessin** — le doigt masque ce qu'il touche, et le
-  joueur vise le bouton qu'il a vu il y a une demi-seconde. Ce débord ne s'étend jamais
-  vers le bouton voisin, seulement vers les bords de l'écran : deux cibles dilatées l'une
-  vers l'autre se recouvrent, et le joueur qui vise « droite » saute.
+- **La vitesse reste celle du clavier.** Ce que le doigt produit est un axe borné à ±1,
+  exactement comme une touche : un geste qui traverse l'écran ne fait pas courir le blob
+  plus vite qu'une touche maintenue. Sans cette borne, le tactile serait *plus fort* que le
+  clavier et les deux modes ne se joueraient plus au même jeu.
+- **Le blob ralentit en arrivant.** À pleine vitesse il dépasserait le point visé d'un
+  demi-pas, reviendrait, le dépasserait encore — il vibrerait autour du doigt. L'axe est
+  donc dosé sur le dernier segment, à l'échelle du pas de physique, qui est exactement la
+  distance qu'il va parcourir.
+- **Un doigt appartient au camp où il s'est posé**, même s'il franchit le milieu de l'écran.
+  Sans cette mémoire, un joueur qui court vers le filet se mettrait à piloter *le blob de
+  son adversaire* — et courir vers le filet est précisément ce qu'on fait dans ce jeu.
+- **Un seul doigt par camp** : le second posé ne vole pas la main au premier, sans quoi une
+  paume à plat ferait tressauter le blob entre deux points au gré de l'ordre de lecture.
+- **Une colonne claire marque l'endroit désigné.** Elle ne double pas le doigt, elle le
+  corrige : le doigt cache le point qu'il touche et le blob met un instant à l'atteindre —
+  sans repère, le joueur ne sait ni où il a pointé, ni si le jeu l'a entendu.
 - **Échap n'existe pas sur mobile.** Le bouton de pause, en haut à droite, est le seul
   accès au menu — donc à « rejouer », à « changer d'adversaire » et aux options.
 
-> **La limite assumée : les commandes recouvrent le bas du terrain.** Un blob peut courir
-> jusqu'à son mur, donc jusque *sous* son propre pavé — et le pouce du joueur, lui, est
-> opaque. Aucun agencement n'y échappe : dans ce jeu l'action vit au ras du sol, et c'est
-> là que sont les pouces. Ce qu'on peut faire, on l'a fait — les boutons sont très
-> translucides et le pavé a été raccourci après essai (0,24 → 0,20 de la hauteur) pour que
-> le sommet du blob dépasse de son bouton. Sur la version bureau, rien de tout cela ne
-> s'affiche : les contrôles n'apparaissent qu'au premier contact d'un doigt.
+> **Ce schéma a remplacé un pavé directionnel**, et l'a fait pour une raison qu'on ne voit
+> qu'en jouant : le pavé occupait le bas de l'écran, c'est-à-dire la bande où vivent les
+> blobs. Le joueur perdait de vue le personnage qu'il déplaçait, au moment précis où il le
+> déplaçait. Le glissement libre n'a rien à poser là : le bas de l'écran est rendu au jeu.
+> Sur la version bureau, rien ne s'affiche : les commandes tactiles n'apparaissent qu'au
+> premier contact d'un doigt.
 
 ### Ce que le tactile change dans le reste du jeu
 
 | Ce qui s'affichait | Au doigt |
 |---|---|
-| `Q / D : se déplacer — Z : sauter — Tab : 2 joueurs` | rien : le bandeau occupe la bande où sont posés les boutons, et il décrirait ce qui est déjà dessiné |
+| `Q / D : se déplacer — Z : sauter — Tab : 2 joueurs` | `Glissez le doigt de votre côté de l'écran — le bouton pour sauter` : le déplacement est le seul geste du jeu qui ne se voie pas |
 | `2 joueurs — même clavier` | `2 joueurs — même écran` |
 | `Appuyez sur R pour rejouer` | `Touchez Pause, en haut à droite, pour rejouer` |
-| `Haut/Bas ou molette : naviguer — Entrée : valider` | `Touchez une ligne pour la choisir` |
+| `Haut/Bas ou molette : naviguer — Entrée : valider` | `Glissez pour faire défiler — touchez une ligne` |
 | `Quitter` | absent : en WebGL, un onglet ne se ferme pas lui-même, et la ligne ne faisait rien |
 
 > **Un texte peut être correct et faux.** Chacune de ces phrases était juste, et chacune

@@ -949,9 +949,9 @@ namespace SmilyVolley.EditorTools
             // est plus longue que l'écran, et rien ne le disait — un joueur arrivé en bas
             // de ce qu'il voit n'a aucune raison de deviner qu'il reste des réglages.
             Image scrollUp = ScrollArrow(cardGo.transform, "ScrollUp", new Vector2(0.5f, 1f),
-                new Vector2(0f, -10f), false);
+                new Vector2(0f, -10f), false, out Button scrollUpButton);
             Image scrollDown = ScrollArrow(cardGo.transform, "ScrollDown", new Vector2(0.5f, 0f),
-                new Vector2(0f, 10f), true);
+                new Vector2(0f, 10f), true, out Button scrollDownButton);
 
             var menuRows = new MenuRow[MenuRowCount];
             for (int i = 0; i < MenuRowCount; i++) menuRows[i] = BuildMenuRow(listRect, i);
@@ -980,6 +980,8 @@ namespace SmilyVolley.EditorTools
             menu.narrowWidth = MenuNarrowWidth;
             menu.scrollUp = scrollUp;
             menu.scrollDown = scrollDown;
+            menu.scrollUpButton = scrollUpButton;
+            menu.scrollDownButton = scrollDownButton;
             menu.cursor = cursor;
             menu.cardGroup = cardGroup;
 
@@ -1022,7 +1024,6 @@ namespace SmilyVolley.EditorTools
             var touch = canvasGo.AddComponent<TouchHud>();
             touch.manager = manager;
             touch.menu = menu;
-            touch.roundedSprite = LoadSprite("rounded.png");
             touch.discSprite = LoadSprite("disc.png");
             touch.triangleSprite = LoadSprite("triangle.png");
             touch.squareSprite = LoadSprite("square.png");
@@ -1272,8 +1273,18 @@ namespace SmilyVolley.EditorTools
         /// n'en propose aucune, et l'indicateur disparaissait donc dans la version web — c'est-à-
         /// dire précisément le signe qui dit qu'il reste des réglages plus bas.
         /// </remarks>
+        /// <summary>
+        /// Flèche de débordement, dans la marge de la carte — et bouton de défilement.
+        /// </summary>
+        /// <remarks>
+        /// ⚠ Elle ne se contentait que de <b>dire</b> que la liste continue, et cela suffisait tant
+        /// qu'on avait une molette ou des flèches de clavier. Au doigt, une indication qui ne se
+        /// touche pas ne fait qu'annoncer ce qu'on ne peut pas atteindre. La cible sensible est
+        /// bien plus large que le dessin — le triangle fait quatorze pixels de haut, soit le tiers
+        /// d'un doigt.
+        /// </remarks>
         static Image ScrollArrow(Transform parent, string name, Vector2 anchor,
-            Vector2 anchoredPosition, bool pointingDown)
+            Vector2 anchoredPosition, bool pointingDown, out Button button)
         {
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
@@ -1290,6 +1301,27 @@ namespace SmilyVolley.EditorTools
             image.sprite = LoadSprite("triangle.png");
             image.color = MenuStepTint;
             image.raycastTarget = false;
+
+            // La zone touchable est une SŒUR de la flèche, non son parent : la flèche est tournée
+            // d'un demi-tour quand elle pointe vers le bas, et une cible qui hériterait de cette
+            // rotation garderait sa forme mais plus sa position au pixel près.
+            var zone = new GameObject(name + "Touch", typeof(RectTransform));
+            zone.transform.SetParent(parent, false);
+            var zoneRect = (RectTransform)zone.transform;
+            zoneRect.anchorMin = anchor;
+            zoneRect.anchorMax = anchor;
+            zoneRect.pivot = new Vector2(0.5f, 0.5f);
+            zoneRect.sizeDelta = new Vector2(180f, 64f);
+            zoneRect.anchoredPosition = anchoredPosition;
+
+            var hit = zone.AddComponent<Image>();
+            hit.color = new Color(0f, 0f, 0f, 0f);   // invisible, mais touchable
+            hit.raycastTarget = true;
+
+            button = zone.AddComponent<Button>();
+            button.transition = Selectable.Transition.None;
+            button.targetGraphic = hit;
+
             return image;
         }
 

@@ -6,31 +6,32 @@ namespace SmilyVolley
     public enum TouchTarget
     {
         None,
-        Left,
-        Right,
+
+        /// <summary>Le doigt désigne l'endroit du terrain où le blob doit aller.</summary>
+        Move,
+
         Jump
     }
 
     /// <summary>
-    /// Découpage de l'écran tactile : où sont les boutons de chaque camp, et lequel un doigt
-    /// touche.
+    /// Découpage de l'écran tactile : ce qu'un doigt commande selon l'endroit où il se pose.
     ///
-    /// <para><b>Pourquoi ces nombres vivent ici et pas dans le HUD.</b> Ils sont lus par deux
-    /// couches qui ne se parlent pas : le <i>dessin</i> (où poser le bouton) et la <i>lecture</i>
-    /// (ce doigt appuie-t-il dessus ?). Les laisser diverger produit le défaut le plus coûteux du
-    /// tactile — un bouton qui se voit et ne répond pas, ou qui répond à côté, sans qu'aucune
-    /// erreur ne soit levée. Un seul jeu de nombres, consommé des deux côtés, rend l'écart
-    /// impossible.</para>
+    /// <para><b>Le déplacement n'est pas un bouton.</b> Chaque joueur pilote son blob en
+    /// <b>glissant le doigt</b> dans sa moitié d'écran : le point touché désigne l'endroit du
+    /// terrain où il veut être, et le blob y court. La conversion de l'écran vers le monde passe
+    /// par la caméra (voir <see cref="HumanBlobInput"/>), si bien que le doigt pointe
+    /// <i>littéralement</i> l'endroit visé — aucune correspondance à inventer, aucun réglage de
+    /// sensibilité à trouver.</para>
+    ///
+    /// <para><b>Ce que ce choix a supprimé.</b> Un pavé directionnel occupait le bas de l'écran,
+    /// c'est-à-dire la bande où vivent les blobs : le joueur perdait de vue le personnage qu'il
+    /// déplaçait, au moment précis où il le déplaçait. Il ne reste en bas qu'un bouton de saut, au
+    /// coin.</para>
     ///
     /// <para><b>Repère : pixels écran, origine en bas à gauche</b> — celui de
     /// <c>Touchscreen.position</c>, et celui d'un canevas uGUI en <c>ConstantPixelSize</c> dont les
-    /// ancres sont au coin bas-gauche. C'est ce qui permet au HUD tactile de poser ses images aux
-    /// coordonnées rendues ici sans aucune conversion.</para>
-    ///
-    /// <para><b>Deux agencements, un seul jeu de formules.</b> À deux joueurs, chacun tient son
-    /// bord de l'écran avec ses trois boutons ; en solo contre l'ordinateur, les mêmes boutons
-    /// s'écartent aux deux bouts — déplacement sous le pouce gauche, saut sous le pouce droit,
-    /// puisque la seconde main est libre. Le drapeau <c>solo</c> traverse donc toute l'API.</para>
+    /// ancres sont au coin bas-gauche. Le HUD tactile pose donc ses images aux coordonnées rendues
+    /// ici sans aucune conversion.</para>
     /// </summary>
     public static class TouchZones
     {
@@ -46,21 +47,6 @@ namespace SmilyVolley
         /// </remarks>
         public const float MarginFraction = 0.055f;
 
-        /// <summary>Largeur d'UNE des deux touches du pavé directionnel.</summary>
-        public const float PadKeyWidthFraction = 0.19f;
-
-        /// <summary>Hauteur du pavé directionnel.</summary>
-        /// <remarks>
-        /// ⚠ Réduite de 0,24 après essai : le blob peut courir jusqu'à son mur, donc <b>jusque sous
-        /// son propre pavé</b>, et à 0,24 le pavé était deux fois plus haut que lui — le joueur
-        /// perdait de vue le personnage qu'il déplaçait, au moment précis où il le déplaçait. La
-        /// superposition ne disparaît pas (le bas de l'écran appartient aux blobs comme aux pouces,
-        /// c'est la nature de ce jeu au doigt), mais le sommet du blob dépasse maintenant du bouton.
-        /// 0,20 vaut encore 72 px sur un téléphone bas de 360 px, bien au-delà de la cible
-        /// confortable.
-        /// </remarks>
-        public const float PadHeightFraction = 0.20f;
-
         /// <summary>Rayon du bouton de saut à deux joueurs, où chacun n'a qu'une moitié d'écran.</summary>
         public const float JumpRadiusFraction = 0.135f;
 
@@ -73,14 +59,11 @@ namespace SmilyVolley
         /// </remarks>
         public const float SoloJumpRadiusFraction = 0.155f;
 
-        /// <summary>Écart entre le pavé directionnel et le bouton de saut d'un même camp.</summary>
-        public const float GapFraction = 0.05f;
-
         /// <summary>Rayon du bouton de pause.</summary>
         /// <remarks>
         /// ⚠ Ce bouton n'est pas un confort : <b>sur mobile, il n'y a pas d'Échap</b>. Sans lui, une
         /// partie ne peut être ni interrompue ni quittée, et le joueur n'a d'autre issue que de
-        /// fermer l'onglet. Petit et à l'opposé des contrôles : on le presse entre deux échanges,
+        /// fermer l'onglet. Petit et à l'opposé des commandes : on le presse entre deux échanges,
         /// jamais pendant.
         /// </remarks>
         public const float PauseRadiusFraction = 0.075f;
@@ -98,35 +81,25 @@ namespace SmilyVolley
         public const float MinTouchPx = 44f;
 
         /// <summary>
-        /// Débord de la zone SENSIBLE d'un bouton par rapport à son dessin, en fraction de sa
-        /// propre taille.
+        /// Débord de la zone SENSIBLE du bouton de saut par rapport à son dessin.
         /// </summary>
         /// <remarks>
-        /// <para>Le doigt masque ce qu'il touche : le joueur vise le bouton qu'il a vu il y a une
+        /// Le doigt masque ce qu'il touche : le joueur vise le bouton qu'il a vu il y a une
         /// demi-seconde, pas celui qu'il voit. Une cible sensible plus large que le dessin absorbe
-        /// cette erreur, et c'est la correction la plus rentable du tactile.</para>
-        ///
-        /// <para>⚠ Elle n'est PAS appliquée du côté où deux boutons se font face (voir
-        /// <see cref="PadTouchRect"/>) : deux zones dilatées l'une vers l'autre se recouvrent, et
-        /// l'une des deux cesse alors d'être atteignable près de sa bordure — le joueur qui vise
-        /// « droite » saute. Chaque bouton gagne donc de la surface vers les bords de l'écran, là
-        /// où il y a de la place et où le doigt tombe court, et n'en gagne aucune vers son
-        /// voisin.</para>
+        /// cette erreur, et c'est la correction la plus rentable du tactile. Elle ne vole rien : ce
+        /// qui l'entoure est la zone de déplacement, où un doigt de trop n'a aucune conséquence
+        /// puisqu'il aurait de toute façon désigné un point tout proche.
         /// </remarks>
         public const float TouchSlop = 0.3f;
 
         // ------------------------------------------------------------------ unité de mesure
 
-        /// <summary>
-        /// Largeur minimale, en unités, pour qu'un camp loge ses trois boutons dans SA MOITIÉ
-        /// d'écran : marge + pavé + écart + bouton de saut, plus une marge de sécurité au milieu.
-        /// </summary>
-        const float DuoWidthNeeded = 2f * (MarginFraction + 2f * PadKeyWidthFraction
-                                           + GapFraction + 2f * JumpRadiusFraction);
+        /// <summary>Largeur minimale, en unités, pour qu'un camp loge son bouton dans SA MOITIÉ d'écran.</summary>
+        const float DuoWidthNeeded = 2f * (MarginFraction + 2f * JumpRadiusFraction);
 
-        /// <summary>Même calcul en solo, où les boutons se partagent la largeur entière.</summary>
-        const float SoloWidthNeeded = 2f * MarginFraction + 2f * PadKeyWidthFraction
-                                      + 2f * SoloJumpRadiusFraction + GapFraction;
+        /// <summary>Même calcul en solo, où le bouton et la pause se partagent la largeur entière.</summary>
+        const float SoloWidthNeeded = 2f * MarginFraction + 2f * SoloJumpRadiusFraction
+                                      + 2f * PauseRadiusFraction;
 
         /// <summary>
         /// L'unité sur laquelle toutes les tailles sont bâties.
@@ -137,13 +110,9 @@ namespace SmilyVolley
         /// largeur deviendrait énorme sur une tablette et minuscule sur un téléphone — exactement
         /// l'inverse de ce qu'il faut.</para>
         ///
-        /// <para><b>Mais bornée par la largeur.</b> Sur un écran presque carré — une fenêtre de
-        /// navigateur qu'on a rétrécie, une tablette en 4/3 — la hauteur devient si proche de la
-        /// largeur que les trois boutons d'un camp débordent au-delà du milieu de l'écran et
-        /// viennent recouvrir ceux de l'autre joueur. Le symptôme serait le pire du tactile : deux
-        /// boutons superposés dont un seul répond, sans la moindre erreur. Ce plafond-là ne mord
-        /// jamais en 16/9, où le rapport vaut 1,78 pour un besoin d'environ 1,51.
-        /// </para>
+        /// <para><b>Mais bornée par la largeur</b>, pour qu'un bouton ne déborde jamais au-delà du
+        /// milieu de l'écran sur une fenêtre presque carrée. Deux boutons superposés dont un seul
+        /// répond serait le pire symptôme possible, et il n'apparaîtrait sur aucun journal.</para>
         /// </remarks>
         public static float Unit(bool solo, float screenWidth, float screenHeight)
         {
@@ -168,12 +137,6 @@ namespace SmilyVolley
 
         public static float Margin(bool solo, float w, float h) => MarginFraction * Unit(solo, w, h);
 
-        public static float PadKeyWidth(bool solo, float w, float h)
-            => Mathf.Max(MinTouchPx, PadKeyWidthFraction * Unit(solo, w, h));
-
-        public static float PadHeight(bool solo, float w, float h)
-            => Mathf.Max(MinTouchPx, PadHeightFraction * Unit(solo, w, h));
-
         public static float JumpRadius(bool solo, float w, float h)
             => Mathf.Max(MinTouchPx * 0.5f,
                          (solo ? SoloJumpRadiusFraction : JumpRadiusFraction) * Unit(solo, w, h));
@@ -184,55 +147,26 @@ namespace SmilyVolley
 
         // ------------------------------------------------------------------ placement
 
-        /// <summary>
-        /// Pavé directionnel DESSINÉ d'un camp : les deux touches d'un seul tenant, gauche à gauche
-        /// et droite à droite.
-        /// </summary>
-        /// <remarks>
-        /// <para><b>D'un seul tenant, et non deux boutons séparés par un vide.</b> Deux cibles
-        /// distinctes obligent le pouce à viser, et la zone entre elles ne fait rien — c'est
-        /// précisément là que le doigt tombe quand on change de direction en pleine course. Un pavé
-        /// continu n'a pas de trou : la frontière est au milieu, et glisser d'un côté à l'autre sans
-        /// lever le doigt change de direction.</para>
-        ///
-        /// <para>Le camp de droite garde « gauche à gauche » : refléter les commandes parce que le
-        /// joueur est assis à droite est un piège classique, et faux — le blob, lui, ne s'est pas
-        /// retourné.</para>
-        /// </remarks>
-        public static Rect PadRect(Side side, bool solo, float w, float h)
-        {
-            float margin = Margin(solo, w, h);
-            float width = PadKeyWidth(solo, w, h) * 2f;
-            float height = PadHeight(solo, w, h);
-
-            // En solo, le seul pavé du jeu est à gauche : le joueur a ses deux pouces, déplacement à
-            // gauche et saut à droite. À deux, chacun tient son propre bord de l'écran.
-            bool atLeftEdge = solo || side == Side.Left;
-            float x = atLeftEdge ? margin : w - margin - width;
-
-            return new Rect(x, margin, width, height);
-        }
-
         /// <summary>Centre du bouton de saut DESSINÉ d'un camp.</summary>
+        /// <remarks>
+        /// Au coin <b>extérieur</b> de sa moitié — le bord de l'écran, là où tombe naturellement le
+        /// pouce de la main qui tient l'appareil. Le milieu de l'écran reste ainsi entièrement
+        /// dégagé, et rien ne se pose entre les deux joueurs.
+        /// </remarks>
         public static Vector2 JumpCenter(Side side, bool solo, float w, float h)
         {
             float margin = Margin(solo, w, h);
             float radius = JumpRadius(solo, w, h);
 
-            // En solo le saut part à l'autre bout de l'écran, sous le pouce droit resté libre.
-            if (solo) return new Vector2(w - margin - radius, margin + radius);
-
-            Rect pad = PadRect(side, false, w, h);
-            float gap = GapFraction * Unit(false, w, h);
-
-            // À deux, il se range à l'intérieur du pavé de son camp — vers le filet, donc vers
-            // l'autre joueur, mais sans jamais franchir le milieu de l'écran (voir Unit).
-            float x = side == Side.Left ? pad.xMax + gap + radius : pad.xMin - gap - radius;
+            // En solo, le déplacement se glisse sous le pouce gauche : le saut part donc à droite,
+            // sous celui qui reste libre.
+            bool atRightEdge = solo || side == Side.Right;
+            float x = atRightEdge ? w - margin - radius : margin + radius;
 
             return new Vector2(x, margin + radius);
         }
 
-        /// <summary>Centre du bouton de pause — en haut à droite, loin des deux paires de pouces.</summary>
+        /// <summary>Centre du bouton de pause — en haut à droite, loin des pouces de jeu.</summary>
         public static Vector2 PauseCenter(float w, float h)
         {
             float margin = Margin(true, w, h);
@@ -243,26 +177,6 @@ namespace SmilyVolley
 
         // ------------------------------------------------------------------ zones sensibles
 
-        /// <summary>
-        /// Pavé SENSIBLE : le dessin élargi vers les bords de l'écran, jamais vers le bouton de
-        /// saut voisin. Voir <see cref="TouchSlop"/>.
-        /// </summary>
-        public static Rect PadTouchRect(Side side, bool solo, float w, float h)
-        {
-            Rect drawn = PadRect(side, solo, w, h);
-            float slop = PadKeyWidth(solo, w, h) * TouchSlop;
-
-            // Le côté « intérieur » est celui où se trouve le bouton de saut : il ne gagne rien.
-            bool jumpOnRight = solo || side == Side.Left;
-
-            float xMin = drawn.xMin - (jumpOnRight ? slop : 0f);
-            float xMax = drawn.xMax + (jumpOnRight ? 0f : slop);
-
-            // Vers le bas jusqu'au bord de l'écran : un pouce qui vise le pavé tombe plus souvent
-            // court que long, et il n'y a rien sous lui à voler.
-            return Rect.MinMaxRect(xMin, 0f, xMax, drawn.yMax + slop);
-        }
-
         /// <summary>Rayon SENSIBLE du bouton de saut.</summary>
         public static float JumpTouchRadius(bool solo, float w, float h)
             => JumpRadius(solo, w, h) * (1f + TouchSlop);
@@ -271,7 +185,7 @@ namespace SmilyVolley
         /// Le doigt tombe-t-il sur le bouton de pause ?
         /// </summary>
         /// <remarks>
-        /// Sans marge, contrairement aux autres : une pause déclenchée par erreur en plein échange
+        /// Sans marge, contrairement au saut : une pause déclenchée par erreur en plein échange
         /// coûte le point. Il vaut mieux la manquer une fois que la déclencher une fois.
         /// </remarks>
         public static bool IsPause(float x, float y, float w, float h)
@@ -283,29 +197,43 @@ namespace SmilyVolley
         }
 
         /// <summary>
-        /// Ce que commande un doigt posé en (x, y) POUR LE CAMP indiqué. <see cref="TouchTarget.None"/>
-        /// s'il ne touche aucun de ses boutons — le doigt appartient alors peut-être à l'autre camp,
-        /// qu'il faut interroger séparément.
+        /// La moitié d'écran d'un camp : toute la surface où son joueur peut glisser.
         /// </summary>
         /// <remarks>
-        /// La pause n'est pas testée ici : elle n'appartient à aucun camp. C'est <see cref="IsPause"/>
-        /// qui la tranche, et le lecteur doit l'appeler <b>avant</b> — un bouton commun placé dans
-        /// la moitié d'un camp serait sinon avalé par lui.
+        /// <para><b>Une moitié entière, et rien de moins.</b> Le joueur ne vise pas une piste : il
+        /// désigne un endroit du terrain, et cet endroit est <i>déjà</i> à l'écran, dans sa moitié.
+        /// Restreindre la zone à une bande obligerait à traduire un geste en un autre, ce qui est
+        /// exactement ce que ce schéma évite.</para>
+        ///
+        /// <para>En solo, le joueur n'a que le camp gauche : sa moitié est la même qu'à deux, et
+        /// la moitié droite ne commande rien — le blob de droite y est piloté par l'ordinateur.</para>
+        /// </remarks>
+        public static bool IsMoveZone(float x, float y, Side side, float w, float h)
+        {
+            float middle = w * 0.5f;
+            return side == Side.Left ? x <= middle : x > middle;
+        }
+
+        /// <summary>
+        /// Ce que commande un doigt posé en (x, y) POUR LE CAMP indiqué. <see cref="TouchTarget.None"/>
+        /// s'il n'appartient pas à ce camp — le doigt est alors peut-être à l'autre, qu'il faut
+        /// interroger séparément.
+        /// </summary>
+        /// <remarks>
+        /// <para>Le saut est testé <b>avant</b> la zone de déplacement : il est posé dedans, et
+        /// l'ordre inverse l'avalerait entièrement.</para>
+        ///
+        /// <para>La pause n'est pas testée ici : elle n'appartient à aucun camp. C'est
+        /// <see cref="IsPause"/> qui la tranche, et le lecteur doit l'appeler <b>avant</b> — un
+        /// bouton commun placé dans la moitié d'un camp serait sinon avalé par lui.</para>
         /// </remarks>
         public static TouchTarget Hit(float x, float y, Side side, bool solo, float w, float h)
         {
-            var point = new Vector2(x, y);
-
             Vector2 jump = JumpCenter(side, solo, w, h);
             float reach = JumpTouchRadius(solo, w, h);
-            if ((point - jump).sqrMagnitude <= reach * reach) return TouchTarget.Jump;
+            if ((new Vector2(x, y) - jump).sqrMagnitude <= reach * reach) return TouchTarget.Jump;
 
-            if (!PadTouchRect(side, solo, w, h).Contains(point)) return TouchTarget.None;
-
-            // La frontière est au milieu du pavé DESSINÉ, pas du pavé sensible : le débord
-            // n'appartient qu'à la touche du bord vers laquelle il s'étend.
-            float middle = PadRect(side, solo, w, h).center.x;
-            return x < middle ? TouchTarget.Left : TouchTarget.Right;
+            return IsMoveZone(x, y, side, w, h) ? TouchTarget.Move : TouchTarget.None;
         }
     }
 }

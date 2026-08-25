@@ -4,25 +4,24 @@ using UnityEngine.UI;
 namespace SmilyVolley
 {
     /// <summary>
-    /// Dessine les commandes tactiles — un pavé directionnel et un bouton de saut par camp, plus le
-    /// bouton de pause — et ouvre la capture des doigts tant qu'elles sont à l'écran.
+    /// Dessine les commandes tactiles — un bouton de saut par camp, le bouton de pause, et le
+    /// repère qui suit le doigt qui déplace un blob — et ouvre la capture des doigts pendant un
+    /// match.
     ///
     /// <para><b>Celui qui montre est celui qui écoute.</b> C'est ce composant, et lui seul, qui
     /// appelle <see cref="TouchInput.SetGameControls"/>. Séparer les deux responsabilités laisserait
-    /// exister un état où des boutons répondent sans se voir — un doigt posé pendant un menu
-    /// ferait alors courir un blob derrière le panneau — ou l'inverse, des boutons qui se voient et
-    /// ne répondent pas, qui est le pire symptôme du tactile parce qu'il ne ressemble à rien
-    /// d'autre qu'à un jeu cassé.</para>
+    /// exister un état où des commandes répondent sans se voir — un doigt posé pendant un menu
+    /// ferait alors courir un blob derrière le panneau.</para>
     ///
-    /// <para><b>Les positions ne sont pas décidées ici</b> : elles viennent toutes de
+    /// <para><b>Il n'y a presque plus rien à dessiner</b>, et c'est le but : le déplacement est un
+    /// glissement libre dans sa moitié d'écran, pas un bouton à viser. Ce qui occupait le bas de
+    /// l'écran — donc la bande où vivent les blobs — a disparu ; il ne reste qu'un bouton de saut
+    /// au coin, et un repère sous le doigt pour dire au joueur où le jeu croit qu'il pointe.</para>
+    ///
+    /// <para><b>Les positions ne sont pas décidées ici</b> : elles viennent de
     /// <see cref="TouchZones"/>, qui sert aussi à la lecture. Le canevas est en
     /// <c>ConstantPixelSize</c> à l'échelle 1 et ses ancres sont au coin bas-gauche, si bien que les
-    /// coordonnées écran de la dalle s'y posent <b>sans aucune conversion</b> — une mise à
-    /// l'échelle, ici, serait une occasion silencieuse de désaccord entre le dessin et le
-    /// toucher.</para>
-    ///
-    /// <para>Les images sont construites à l'exécution plutôt qu'enregistrées dans la scène : leur
-    /// nombre dépend du mode de jeu, et leur taille de la dalle du joueur.</para>
+    /// coordonnées écran de la dalle s'y posent <b>sans aucune conversion</b>.</para>
     /// </summary>
     public class TouchHud : MonoBehaviour
     {
@@ -31,8 +30,6 @@ namespace SmilyVolley
         public MenuController menu;
 
         [Header("Sprites")]
-        [Tooltip("Découpé en neuf tranches : les touches du pavé s'étirent sans déformer leurs coins.")]
-        public Sprite roundedSprite;
         public Sprite discSprite;
         public Sprite triangleSprite;
         public Sprite squareSprite;
@@ -45,11 +42,17 @@ namespace SmilyVolley
         public Color glyphColor = new Color(0.16f, 0.26f, 0.36f, 0.62f);
         public Color glyphHeldColor = new Color(0.10f, 0.20f, 0.30f, 0.92f);
 
-        /// <summary>Les trois boutons d'un camp.</summary>
+        [Tooltip("La colonne posée sous le doigt qui déplace un blob. Plus discrète encore que " +
+                 "les boutons : elle traverse tout l'écran, y compris le ciel où vole la balle.")]
+        public Color markerColor = new Color(1f, 0.99f, 0.94f, 0.16f);
+
+        /// <summary>Ce qu'un camp affiche.</summary>
         class SideControls
         {
-            public Image PadLeft, PadRight, PadLeftGlyph, PadRightGlyph;
             public Image Jump, JumpGlyph;
+
+            /// <summary>Le repère posé à l'abscisse du doigt, tant qu'il pilote le blob.</summary>
+            public Image Marker;
         }
 
         Canvas canvas;
@@ -57,7 +60,8 @@ namespace SmilyVolley
         Image pauseDisc, pauseBarA, pauseBarB;
 
         // L'agencement ne se recalcule qu'au changement : rotation de l'appareil, barre d'URL qui
-        // se rétracte, passage d'un mode à l'autre. Le reste du temps, seules les teintes bougent.
+        // se rétracte, passage d'un mode à l'autre. Le reste du temps, seuls les teintes et le
+        // repère bougent.
         int laidOutWidth = -1;
         int laidOutHeight = -1;
         bool laidOutSolo;
@@ -72,7 +76,7 @@ namespace SmilyVolley
         void OnDisable()
         {
             // Un composant désactivé ne dessine plus : laisser la porte ouverte donnerait des
-            // boutons invisibles qui répondent encore.
+            // commandes invisibles qui répondent encore.
             TouchInput.SetGameControls(false, TouchInput.Solo);
         }
 
@@ -88,14 +92,11 @@ namespace SmilyVolley
             bool visible = inMatch && TouchInput.Active;
 
             // ⚠ La porte suit le MATCH, pas l'affichage — et la nuance est un défaut évité. Un
-            // joueur qui pose son tout premier doigt le fait forcément alors qu'aucun contrôle n'est
-            // encore dessiné : c'est ce contact-là qui apprend au jeu qu'il y a des doigts. Fermer
-            // la porte tant que rien n'est visible **avalerait donc systématiquement le premier
-            // appui de la partie** — le joueur touche, rien ne bouge, il recommence. La condition
-            // qui compte est celle qui protège vraiment quelque chose : hors match, tout doigt
-            // appartient à uGUI, et un pavé actif y volerait les appuis destinés aux boutons du
-            // menu. Toujours appelé, y compris quand rien n'est visible : c'est cet appel-là qui
-            // referme la porte, et il ne doit pas dépendre d'une branche.
+            // joueur qui pose son tout premier doigt le fait forcément alors qu'aucune commande
+            // n'est encore dessinée : c'est ce contact-là qui apprend au jeu qu'il y a des doigts.
+            // Fermer la porte tant que rien n'est visible **avalerait donc systématiquement le
+            // premier geste de la partie**. La condition qui protège vraiment quelque chose est
+            // l'autre : hors match, tout doigt appartient à uGUI.
             TouchInput.SetGameControls(inMatch, solo);
 
             if (canvas != null) canvas.enabled = visible;
@@ -130,30 +131,21 @@ namespace SmilyVolley
             Place(right, Side.Right, solo, w, h);
             PlacePause(w, h);
 
-            // Contre l'ordinateur, le blob de droite n'a pas de mains : ses boutons n'ont rien à
-            // commander, et les laisser à l'écran inviterait à presser ce qui ne répond pas.
+            // Contre l'ordinateur, le blob de droite n'a pas de mains : son bouton n'a rien à
+            // commander, et le laisser à l'écran inviterait à presser ce qui ne répond pas.
             SetActive(right, !solo);
         }
 
         void Place(SideControls controls, Side side, bool solo, float w, float h)
         {
-            Rect pad = TouchZones.PadRect(side, solo, w, h);
-            float key = pad.width * 0.5f;
-
-            // Les deux touches sont jointives : la frontière du dessin est celle de la lecture.
-            Move(controls.PadLeft, new Vector2(pad.xMin + key * 0.5f, pad.center.y), new Vector2(key, pad.height));
-            Move(controls.PadRight, new Vector2(pad.xMax - key * 0.5f, pad.center.y), new Vector2(key, pad.height));
-
-            float glyph = Mathf.Min(key, pad.height) * 0.42f;
-            Move(controls.PadLeftGlyph, ((RectTransform)controls.PadLeft.transform).anchoredPosition,
-                 new Vector2(glyph, glyph));
-            Move(controls.PadRightGlyph, ((RectTransform)controls.PadRight.transform).anchoredPosition,
-                 new Vector2(glyph, glyph));
-
             Vector2 jump = TouchZones.JumpCenter(side, solo, w, h);
             float diameter = TouchZones.JumpRadius(solo, w, h) * 2f;
+
             Move(controls.Jump, jump, new Vector2(diameter, diameter));
             Move(controls.JumpGlyph, jump, new Vector2(diameter * 0.40f, diameter * 0.40f));
+
+            // Le repère n'est placé qu'à l'usage : sa hauteur est fixe, son abscisse suit le doigt.
+            Move(controls.Marker, new Vector2(0f, 0f), new Vector2(diameter * 0.10f, h));
         }
 
         void PlacePause(float w, float h)
@@ -168,7 +160,7 @@ namespace SmilyVolley
             Move(pauseBarB, center + new Vector2(offset, 0f), bar);
         }
 
-        // ------------------------------------------------------------------ teintes
+        // ------------------------------------------------------------------ teintes et repère
 
         void Paint(bool solo)
         {
@@ -184,35 +176,44 @@ namespace SmilyVolley
 
         void PaintSide(SideControls controls, Side side)
         {
-            bool holdLeft = TouchInput.PadHeld(side, right: false);
-            bool holdRight = TouchInput.PadHeld(side, right: true);
             bool holdJump = TouchInput.JumpDrawnHeld(side);
-
-            controls.PadLeft.color = holdLeft ? heldColor : idleColor;
-            controls.PadRight.color = holdRight ? heldColor : idleColor;
             controls.Jump.color = holdJump ? heldColor : idleColor;
-
-            controls.PadLeftGlyph.color = holdLeft ? glyphHeldColor : glyphColor;
-            controls.PadRightGlyph.color = holdRight ? glyphHeldColor : glyphColor;
             controls.JumpGlyph.color = holdJump ? glyphHeldColor : glyphColor;
+
+            // Le repère : une colonne claire à l'endroit que le doigt désigne.
+            //
+            // ⚠ Il ne double pas le doigt, il le CORRIGE. Le doigt cache le point qu'il touche, et
+            // le blob met un instant à l'atteindre : sans repère, le joueur ne sait ni où il vient
+            // de pointer, ni si le jeu l'a entendu. Une colonne pleine hauteur reste visible
+            // au-dessus de la main.
+            bool moving = TouchInput.HasMoveTarget(side);
+            controls.Marker.enabled = moving;
+            if (!moving) return;
+
+            var rect = (RectTransform)controls.Marker.transform;
+            rect.anchoredPosition = new Vector2(TouchInput.MoveScreenX(side), Screen.height * 0.5f);
         }
 
         // ------------------------------------------------------------------ construction
 
         SideControls BuildSide()
         {
-            return new SideControls
+            var controls = new SideControls
             {
-                PadLeft = CreateImage("PadLeft", roundedSprite, Image.Type.Sliced),
-                PadRight = CreateImage("PadRight", roundedSprite, Image.Type.Sliced),
-                // Le triangle du projet pointe vers le haut : les flèches horizontales sont le même
-                // sprite tourné d'un quart de tour. La police du jeu, elle, n'a aucun glyphe de
-                // flèche, et un navigateur n'a pas de police système pour l'y suppléer.
-                PadLeftGlyph = CreateImage("PadLeftGlyph", triangleSprite, Image.Type.Simple, 90f),
-                PadRightGlyph = CreateImage("PadRightGlyph", triangleSprite, Image.Type.Simple, -90f),
                 Jump = CreateImage("Jump", discSprite, Image.Type.Simple),
-                JumpGlyph = CreateImage("JumpGlyph", triangleSprite, Image.Type.Simple)
+                // Le triangle du projet pointe vers le haut : c'est le glyphe du saut sans rotation.
+                // La police du jeu, elle, n'a aucune flèche, et un navigateur n'a pas de police
+                // système pour l'y suppléer.
+                JumpGlyph = CreateImage("JumpGlyph", triangleSprite, Image.Type.Simple),
+                Marker = CreateImage("Marker", squareSprite, Image.Type.Simple)
             };
+
+            controls.Marker.color = markerColor;
+            // Éteint jusqu'au premier doigt : posé à zéro par l'agencement, il barrerait sinon le
+            // bord gauche de l'écran le temps d'une image.
+            controls.Marker.enabled = false;
+
+            return controls;
         }
 
         void BuildPause()
@@ -222,7 +223,7 @@ namespace SmilyVolley
             pauseBarB = CreateImage("PauseBarB", squareSprite, Image.Type.Simple);
         }
 
-        Image CreateImage(string name, Sprite sprite, Image.Type type, float rotation = 0f)
+        Image CreateImage(string name, Sprite sprite, Image.Type type)
         {
             var go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(transform, false);
@@ -233,7 +234,6 @@ namespace SmilyVolley
             rect.anchorMin = Vector2.zero;
             rect.anchorMax = Vector2.zero;
             rect.pivot = new Vector2(0.5f, 0.5f);
-            rect.localRotation = Quaternion.Euler(0f, 0f, rotation);
 
             var image = go.AddComponent<Image>();
             image.sprite = sprite;
@@ -241,7 +241,7 @@ namespace SmilyVolley
             image.color = idleColor;
 
             // ⚠ Sans cela, ces images captent les clics destinés à uGUI. Elles ne sont pas des
-            // boutons : c'est TouchInput qui lit la dalle, elles ne font que montrer où viser.
+            // boutons : c'est TouchInput qui lit la dalle, elles ne font que montrer.
             image.raycastTarget = false;
 
             return image;
@@ -256,12 +256,9 @@ namespace SmilyVolley
 
         static void SetActive(SideControls controls, bool active)
         {
-            controls.PadLeft.gameObject.SetActive(active);
-            controls.PadRight.gameObject.SetActive(active);
-            controls.PadLeftGlyph.gameObject.SetActive(active);
-            controls.PadRightGlyph.gameObject.SetActive(active);
             controls.Jump.gameObject.SetActive(active);
             controls.JumpGlyph.gameObject.SetActive(active);
+            controls.Marker.gameObject.SetActive(active);
         }
     }
 }

@@ -63,6 +63,10 @@ namespace SmilyVolley
                  "flèche, et un navigateur n'a pas de police système pour l'y suppléer.")]
         public Graphic scrollUp;
         public Graphic scrollDown;
+        [Tooltip("Zones touchables des deux flèches. Au doigt, une indication qui ne se touche " +
+                 "pas ne fait qu'annoncer ce qu'on ne peut pas atteindre.")]
+        public Button scrollUpButton;
+        public Button scrollDownButton;
         [Tooltip("Le blob qui montre la ligne choisie, à la place d'un bandeau.")]
         public MenuCursor cursor;
         [Tooltip("Porte le fondu d'ouverture de la carte.")]
@@ -165,7 +169,15 @@ namespace SmilyVolley
                 if (rows[i].increase != null) rows[i].increase.onClick.AddListener(() => OnStepClicked(rowIndex, 1));
                 rows[i].hovered = () => OnRowHovered(rowIndex);
             }
+
+            // Un appui déplace de plusieurs lignes : à une par appui, parcourir l'écran d'options
+            // en demanderait une vingtaine, ce qui n'est pas une façon de faire défiler une liste.
+            if (scrollUpButton != null) scrollUpButton.onClick.AddListener(() => ScrollBy(-ArrowStep));
+            if (scrollDownButton != null) scrollDownButton.onClick.AddListener(() => ScrollBy(ArrowStep));
         }
+
+        /// <summary>Nombre de lignes qu'un appui sur une flèche fait parcourir.</summary>
+        const int ArrowStep = 3;
 
         void Start() => Open(Screen.Main);
 
@@ -256,6 +268,12 @@ namespace SmilyVolley
                 return;
             }
 
+            // ⚠ AVANT la sortie sur clavier absent : un téléphone n'en a pas, et tout ce qui suit
+            // ce garde-là n'existerait jamais pour lui. C'est ainsi que le défilement au doigt
+            // aurait pu être écrit, compilé, câblé — et rester mort sur le seul appareil qui en a
+            // besoin.
+            if (IsOpen && awaitingKey < 0) HandleTouchDrag();
+
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
 
@@ -285,6 +303,55 @@ namespace SmilyVolley
             HandleDirection(keyboard);
             HandleWheel();
         }
+
+        /// <summary>
+        /// Le glissement du doigt fait défiler la liste, comme la molette.
+        /// </summary>
+        /// <remarks>
+        /// <para>⚠ <b>Sans lui, la moitié des options est hors d'atteinte sur téléphone.</b> Le
+        /// défilement de ce menu n'existe pas séparément : la fenêtre visible se déduit de la ligne
+        /// courante, que seuls le clavier et la molette déplaçaient. Au doigt il n'y a ni l'un ni
+        /// l'autre — le joueur touchait les lignes affichées et <b>rien</b> ne lui donnait accès aux
+        /// suivantes. Signalé en jouant.</para>
+        ///
+        /// <para>La distance parcourue est convertie en lignes par le facteur d'échelle du canevas :
+        /// <see cref="rowHeight"/> est en unités d'interface, le doigt en pixels d'écran. Les
+        /// comparer directement rendrait le défilement quatre fois trop lent sur un téléphone —
+        /// c'est-à-dire faux partout sauf à la résolution de référence, la seule où l'on
+        /// développe.</para>
+        ///
+        /// <para>Le reliquat est conservé d'une image à l'autre : un glissement lent avance de moins
+        /// d'un pixel par image, et comparer chaque déplacement isolé à la hauteur d'une ligne ne
+        /// franchirait jamais le seuil — la liste refuserait de bouger sous un doigt qui bouge.</para>
+        /// </remarks>
+        void HandleTouchDrag()
+        {
+            float travelled = TouchInput.ConsumeMenuDragY();
+            if (!CanScroll)
+            {
+                // Consommé quand même : ce qui a été parcouru pendant qu'on ne pouvait pas défiler
+                // ne doit pas s'appliquer d'un coup au premier écran qui le peut.
+                touchDragPending = 0f;
+                return;
+            }
+
+            touchDragPending += travelled;
+
+            if (dragCanvas == null) dragCanvas = GetComponent<Canvas>();
+            float scale = dragCanvas != null ? Mathf.Max(0.01f, dragCanvas.scaleFactor) : 1f;
+            float step = Mathf.Max(1f, rowHeight * scale);
+
+            // Le doigt monte, le contenu monte avec lui : ce qui était en dessous apparaît. C'est
+            // le sens du défilement dit naturel, et l'inverse d'une barre de défilement.
+            int steps = (int)(touchDragPending / step);
+            if (steps == 0) return;
+
+            touchDragPending -= steps * step;
+            ScrollBy(steps);
+        }
+
+        float touchDragPending;
+        Canvas dragCanvas;
 
         /// <summary>
         /// La molette déplace la sélection, comme les flèches haut et bas.
@@ -341,6 +408,38 @@ namespace SmilyVolley
             else if (pressed == downKey) Move(1);
             else if (pressed == prevKey) Adjust(-1);
             else Adjust(1);
+        }
+
+        /// <summary>
+        /// La liste déborde-t-elle de ce qu'on en voit, et peut-on la faire défiler ?
+        /// </summary>
+        /// <remarks>
+        /// Faux sur un écran qui tient tout entier : un glissement y déplacerait la sélection sans
+        /// rien faire défiler, et le joueur verrait sa ligne courante sauter sous un geste dont il
+        /// attendait qu'il ne fasse rien.
+        /// </remarks>
+        public bool CanScroll => IsOpen && awaitingKey < 0 && rows != null && entries.Count > rows.Length;
+
+        /// <summary>
+        /// Fait défiler la liste du nombre de lignes indiqué — positif vers le bas.
+        /// </summary>
+        /// <remarks>
+        /// <para>Passe par <see cref="Move"/>, donc par la <b>sélection</b> : le défilement de ce
+        /// menu n'existe pas séparément, la fenêtre visible se déduit de la ligne courante (voir
+        /// <see cref="Refresh"/>). Le geste a donc exactement l'effet de plusieurs crans de
+        /// molette, boucle comprise — le même geste ne doit pas se comporter de deux façons selon
+        /// le périphérique qui l'a produit.</para>
+        ///
+        /// <para>Appelé par <see cref="HandleTouchDrag"/>, sans quoi l'écran d'options serait
+        /// <b>partiellement hors d'atteinte au doigt</b> : il est plus long que l'écran, et ni le
+        /// clavier ni la molette n'existent sur un téléphone.</para>
+        /// </remarks>
+        public void ScrollBy(int steps)
+        {
+            if (!CanScroll || steps == 0) return;
+
+            int direction = steps > 0 ? 1 : -1;
+            for (int i = 0; i < Mathf.Abs(steps); i++) Move(direction);
         }
 
         void Move(int direction)
@@ -791,8 +890,15 @@ namespace SmilyVolley
             else if (selected >= scroll + rows.Length) scroll = selected - rows.Length + 1;
             scroll = Mathf.Clamp(scroll, 0, Mathf.Max(0, entries.Count - rows.Length));
 
-            if (scrollUp != null) scrollUp.enabled = scroll > 0;
-            if (scrollDown != null) scrollDown.enabled = scroll + rows.Length < entries.Count;
+            bool canGoUp = scroll > 0;
+            bool canGoDown = scroll + rows.Length < entries.Count;
+            if (scrollUp != null) scrollUp.enabled = canGoUp;
+            if (scrollDown != null) scrollDown.enabled = canGoDown;
+
+            // La cible se retire avec sa flèche : un bouton invisible qui répond encore là où plus
+            // rien ne s'affiche avalerait les appuis destinés à la ligne qui se trouve dessous.
+            if (scrollUpButton != null) scrollUpButton.gameObject.SetActive(canGoUp);
+            if (scrollDownButton != null) scrollDownButton.gameObject.SetActive(canGoDown);
 
             for (int i = 0; i < rows.Length; i++)
             {
@@ -861,7 +967,9 @@ namespace SmilyVolley
             {
                 return current switch
                 {
-                    Screen.Options => "Touchez une ligne pour la choisir   —   − et + pour régler",
+                    // ⚠ Le glissement s'annonce, sinon il n'existe pas : la liste d'options est plus
+                    // longue que l'écran et rien, au doigt, ne suggère qu'on peut la faire défiler.
+                    Screen.Options => "Glissez pour faire défiler   —   touchez une ligne   —   − et + pour régler",
                     Screen.Pause => "Touchez « Reprendre » pour retourner au match",
                     _ => "Touchez une ligne pour la choisir",
                 };

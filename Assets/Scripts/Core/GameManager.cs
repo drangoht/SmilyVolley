@@ -184,18 +184,23 @@ namespace SmilyVolley
         /// « Q / D » sur un clavier AZERTY, « A / D » sur un QWERTY, sans rien coder en dur.
         /// </summary>
         /// <remarks>
-        /// <para>⚠ <b>Au doigt, tout ce bandeau est faux</b>, et il est en plus <b>en travers du
-        /// chemin</b> : il occupe le bas de l'écran, c'est-à-dire exactement la bande où sont posés
-        /// le pavé directionnel et le bouton de saut. Il se tait donc — les commandes tactiles sont
-        /// dessinées, et c'est là toute leur raison d'être ; décrire par écrit des boutons qu'on
-        /// voit, en les recouvrant, serait du bruit deux fois.</para>
+        /// <para>⚠ <b>Au doigt, ce bandeau est faux mot pour mot</b> : il nomme des touches que le
+        /// joueur n'a pas. Il dit alors autre chose — et ce qu'il dit compte, parce que le
+        /// déplacement au doigt est le seul geste du jeu qui <b>ne se voie pas</b> : il n'y a pas
+        /// de bouton à repérer, juste une moitié d'écran où glisser. Un joueur qui l'ignore croit
+        /// que son blob ne répond pas.</para>
         ///
-        /// <para>Ce que le bandeau annonçait et qui n'est plus visible — changer de mode, rejouer —
-        /// passe par le bouton de pause, seul endroit où ces actions existent sans clavier.</para>
+        /// <para>Le bandeau a pu le dire parce que le bas de l'écran s'est libéré : il portait un
+        /// pavé directionnel, qui le recouvrait autant qu'il recouvrait les blobs.</para>
         /// </remarks>
         string BuildHint()
         {
-            if (TouchInput.Active) return string.Empty;
+            if (TouchInput.Active)
+            {
+                return rightPlayerIsAi
+                    ? "Glissez le doigt à gauche de l'écran pour vous déplacer   —   le bouton pour sauter"
+                    : "Chacun glisse le doigt de son côté de l'écran   —   son bouton pour sauter";
+            }
 
             string move = "Q / D";
             string jump = "Z";
