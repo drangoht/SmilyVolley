@@ -87,6 +87,94 @@ Ce sont les touches d'origine : elles se réaffectent toutes dans les options.
 > le caractère réellement imprimé sur la touche dans la disposition active du système. Le
 > bandeau annonce donc `Q / D` sur un clavier français et `A / D` sur un clavier anglais.
 
+## Se jouer au doigt
+
+La version web se joue sur téléphone et sur tablette, **à un comme à deux joueurs**, en
+**paysage** — le portrait affiche un panneau qui demande de tourner l'appareil et met le
+jeu en attente (`OrientationGate`). Le terrain fait plus de seize unités de large : en
+hauteur, les blobs deviendraient des pastilles et les commandes se poseraient par-dessus le
+sable. Ce n'est pas une mise en page à réagencer, c'est le champ de vision.
+
+Chaque joueur a **trois boutons** : un pavé directionnel d'un seul tenant et un bouton de
+saut. L'agencement suit le mode de jeu, parce que le nombre de mains disponibles n'est pas
+le même :
+
+```
+2 JOUEURS (chacun sa moitié)          1 JOUEUR (contre l'ordinateur)
+┌──────────────────────────┐          ┌──────────────────────────┐
+│  0 - 0            [ ⏸ ]  │          │  0 - 0            [ ⏸ ]  │
+│      ( )    |    ( )     │          │      ( )    |    ( )     │
+│ [◀][▶] (^)      (^) [◀][▶]│          │ [ ◀ ][ ▶ ]        ( ^ )  │
+└──────────────────────────┘          └──────────────────────────┘
+   J1              J2                  pouce gauche    pouce droit
+```
+
+- Le pavé est **d'un seul tenant** : la frontière est au milieu, et glisser d'un côté à
+  l'autre sans lever le pouce change de direction. Deux boutons séparés par un vide
+  obligeraient à viser, et ce vide est exactement l'endroit où le doigt tombe en pleine
+  course.
+- Le camp de droite garde « gauche à gauche ». Refléter les commandes parce que le joueur
+  est assis à droite est un piège classique : le blob, lui, ne s'est pas retourné.
+- Les zones **sensibles débordent du dessin** — le doigt masque ce qu'il touche, et le
+  joueur vise le bouton qu'il a vu il y a une demi-seconde. Ce débord ne s'étend jamais
+  vers le bouton voisin, seulement vers les bords de l'écran : deux cibles dilatées l'une
+  vers l'autre se recouvrent, et le joueur qui vise « droite » saute.
+- **Échap n'existe pas sur mobile.** Le bouton de pause, en haut à droite, est le seul
+  accès au menu — donc à « rejouer », à « changer d'adversaire » et aux options.
+
+> **La limite assumée : les commandes recouvrent le bas du terrain.** Un blob peut courir
+> jusqu'à son mur, donc jusque *sous* son propre pavé — et le pouce du joueur, lui, est
+> opaque. Aucun agencement n'y échappe : dans ce jeu l'action vit au ras du sol, et c'est
+> là que sont les pouces. Ce qu'on peut faire, on l'a fait — les boutons sont très
+> translucides et le pavé a été raccourci après essai (0,24 → 0,20 de la hauteur) pour que
+> le sommet du blob dépasse de son bouton. Sur la version bureau, rien de tout cela ne
+> s'affiche : les contrôles n'apparaissent qu'au premier contact d'un doigt.
+
+### Ce que le tactile change dans le reste du jeu
+
+| Ce qui s'affichait | Au doigt |
+|---|---|
+| `Q / D : se déplacer — Z : sauter — Tab : 2 joueurs` | rien : le bandeau occupe la bande où sont posés les boutons, et il décrirait ce qui est déjà dessiné |
+| `2 joueurs — même clavier` | `2 joueurs — même écran` |
+| `Appuyez sur R pour rejouer` | `Touchez Pause, en haut à droite, pour rejouer` |
+| `Haut/Bas ou molette : naviguer — Entrée : valider` | `Touchez une ligne pour la choisir` |
+| `Quitter` | absent : en WebGL, un onglet ne se ferme pas lui-même, et la ligne ne faisait rien |
+
+> **Un texte peut être correct et faux.** Chacune de ces phrases était juste, et chacune
+> désignait une touche que le joueur mobile n'a pas. La règle « une commande annonce sa
+> touche » dit en réalité « annonce **comment** on la déclenche ».
+
+### Vérifier sans téléphone
+
+`--touch` en ligne de commande, `?touch` dans l'URL de la version web : le mode tactile est
+forcé et la **souris est simulée en doigt** par l'Input System lui-même. Le chemin parcouru
+est alors exactement celui d'un joueur, et non une image de démonstration posée à côté du
+code qu'elle prétend montrer. Ce que cela ne couvre pas : le multi-touch — tenir le pavé
+*et* presser le saut demande deux doigts, et à deux joueurs, quatre. Il faut alors un vrai
+écran, ou l'émulation tactile du navigateur.
+
+```powershell
+.\Build\Windows\SmilyVolley.exe --touch
+# ou, sur la version web :  http://127.0.0.1:8123/?touch
+```
+
+### Trois pièges qui ne se voient pas dans le code
+
+- **`Touchscreen.current != null` ne dit pas que le joueur se sert de ses doigts.** Un
+  portable Windows à dalle tactile en déclare une alors que son propriétaire joue au
+  clavier. `TouchInput` distingue donc deux questions : *le joueur touche-t-il en ce
+  moment ?* (réversible, décide de l'affichage) et *cet appareil est-il tactile ?* (jamais
+  relâché, décide de ce qui est possible). Confondre les deux fait disparaître la garde
+  d'orientation au premier contact — **tourner son téléphone ne cesse pas d'en faire un
+  téléphone**.
+- **`EventSystem.pixelDragThreshold` vaut 10 px**, calibré pour une souris, qui ne bouge
+  pas quand on clique. Un pouce roule de deux millimètres pendant l'appui : uGUI conclut au
+  glissement et **le bouton ne reçoit jamais son clic**. Aucune erreur, aucun journal — le
+  menu paraît simplement mort. Élargi à 24 px au premier contact.
+- **Un appui du doigt produit aussi un clic de souris**, l'événement de compatibilité hérité
+  du web d'avant le tactile. Relâcher le mode tactile sur un clic ferait donc disparaître
+  les contrôles au moment même où le joueur les touche.
+
 ## Règles implémentées
 
 - La balle qui touche le sol donne le point au camp opposé.
@@ -269,10 +357,10 @@ Assets/
 │   └── BuildTools.cs          Builds Windows et web, réglages projet, tampon de build
 ├── Scenes/Game.unity
 └── Scripts/             → assembly SmilyVolley
-    ├── Core/            GameManager, GameSettings, BlobStyle, CameraFitter, Side
-    ├── Gameplay/        BlobController, BlobJelly, BallController, IA, entrées, particules
+    ├── Core/            GameManager, GameSettings, BlobStyle, CameraFitter, Side, TouchZones
+    ├── Gameplay/        BlobController, BlobJelly, BallController, IA, entrées, TouchInput, particules
     ├── Audio/           GameAudio
-    └── UI/              HudController, MenuController, MenuRow
+    └── UI/              HudController, MenuController, MenuRow, TouchHud, OrientationGate
 docs/
 └── GDD.md               Game Design Document
 ```
@@ -332,15 +420,32 @@ python -m http.server 8123 --directory Build\Web   # http://127.0.0.1:8123
 > Le jeu ne se lance pas depuis un `file://` : le chargeur d'Unity va chercher ses fichiers
 > en HTTP. Un serveur local, même minimal, est indispensable pour l'essayer.
 
-La page hôte est le gabarit `Assets/WebGLTemplates/SmilyVolley`. Elle fait trois choses
+La page hôte est le gabarit `Assets/WebGLTemplates/SmilyVolley`. Elle fait des choses
 qu'aucun réglage d'Unity ne fait :
 
-- **elle garde le cadre 16/9** et centre le jeu sur un fond de plage, plutôt que d'étirer
-  la plage à la fenêtre ;
+- **elle garde le cadre 16/9** sur un écran de bureau et centre le jeu sur un fond de plage,
+  plutôt que d'étirer la plage à la fenêtre ;
 - **elle confisque les touches que le navigateur détourne** — l'espace fait défiler la page
   d'un écran, les flèches suivent le curseur ;
 - **elle réveille le contexte audio** au premier clic : un navigateur n'ouvre le son qu'après
   un geste du joueur, et sans cela la musique du menu ne démarre qu'au hasard d'une frappe.
+
+> ⚠ **La moitié du portage mobile n'est pas dans Unity.** Le moteur ne peut rien contre ce
+> qui se passe avant lui, et rien de tout cela ne lève d'erreur : le **double-appui zoome**
+> la page (donc sauter deux fois de suite), le **glissement fait défiler**, le **geste depuis
+> le bord revient en arrière** — et un pavé directionnel est justement collé au bord —,
+> l'**appui long ouvre un menu système**, et la **barre d'URL recouvre le bas de l'écran**,
+> c'est-à-dire les commandes. Le gabarit les désarme tous, en CSS (`touch-action: none`,
+> `user-scalable=no`, `100dvh`) et en quatre écouteurs, puis **arme le plein écran** au
+> premier contact — celui-là exige un geste de l'utilisateur, l'appeler au chargement échoue
+> en silence. Sur mobile, le cadre 16/9 laisse place au plein écran : `CameraFitter` garde le
+> terrain entier visible de toute façon, et un cadre centré ne ferait que rapetisser les
+> boutons.
+>
+> ⚠ **Et `devicePixelRatio` est forcé à 1** sur mobile. Un téléphone récent en annonce 3 :
+> Unity rendrait **neuf fois** plus de pixels que la dalle logique n'en montre, sur un GPU
+> qui vaut le dixième d'une carte de bureau. C'est le réglage le plus rentable du portage, et
+> son absence ne se signale que par une cadence effondrée.
 
 Les réglages du lecteur (Brotli avec repli JS, cache des données, stripping bas, taille de
 toile) sont posés par `BuildTools.ApplyWebSettings`, jamais à la main dans l'éditeur.

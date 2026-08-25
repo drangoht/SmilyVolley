@@ -104,7 +104,9 @@ namespace SmilyVolley.EditorTools
 
             BuildEffects(ball, left, right);
             GameAudio audio = BuildAudio(ball, manager, left, right);
-            BuildMenu(manager, audio, left, right, hud);
+            MenuController menu = BuildMenu(manager, audio, left, right, hud);
+            BuildTouchHud(manager, menu);
+            BuildOrientationGate(menu);
             BuildStamp();
 
             Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
@@ -302,6 +304,9 @@ namespace SmilyVolley.EditorTools
             blob.maxX = side == Side.Left ? -inner : outer;
 
             var human = go.AddComponent<HumanBlobInput>();
+            // Le camp n'est pas déductible des touches : c'est lui qui dit de quel côté de l'écran
+            // ce joueur trouve ses boutons tactiles.
+            human.side = side;
             if (side == Side.Left)
             {
                 // Key designe une position physique QWERTY : A / D / W se jouent
@@ -860,7 +865,7 @@ namespace SmilyVolley.EditorTools
         /// L'affiche du jeu sert de fond au menu principal ; les options et la pause lui
         /// préfèrent le terrain sous un voile clair, pour que le joueur voie ce qu'il règle.
         /// </summary>
-        static void BuildMenu(GameManager manager, GameAudio audio, BlobController left,
+        static MenuController BuildMenu(GameManager manager, GameAudio audio, BlobController left,
             BlobController right, HudController hud)
         {
             var canvasGo = new GameObject("Menu");
@@ -977,6 +982,118 @@ namespace SmilyVolley.EditorTools
             menu.scrollDown = scrollDown;
             menu.cursor = cursor;
             menu.cardGroup = cardGroup;
+
+            return menu;
+        }
+
+        // ------------------------------------------------------------------ tactile
+
+        /// <summary>
+        /// Le canevas des commandes tactiles : pavé directionnel et bouton de saut par camp, plus
+        /// le bouton de pause. Les images elles-mêmes sont créées à l'exécution par
+        /// <see cref="TouchHud"/> — leur nombre dépend du mode de jeu et leur taille de la dalle.
+        /// </summary>
+        /// <remarks>
+        /// <para>⚠ <b><c>ConstantPixelSize</c> à l'échelle 1, et c'est essentiel</b> : c'est le seul
+        /// mode où une unité d'interface vaut un pixel d'écran. Les positions calculées par
+        /// <c>TouchZones</c> — qui servent aussi à décider quel bouton un doigt touche — s'y posent
+        /// alors sans conversion. Sous le <c>ScaleWithScreenSize</c> du reste de l'interface, le
+        /// dessin et la lecture parleraient deux repères différents, et l'écart entre eux
+        /// grandirait avec la taille de l'écran : des boutons visiblement décalés de ce qui répond,
+        /// sans une erreur nulle part.</para>
+        ///
+        /// <para>Entre le HUD (0) et le menu (10) : les commandes passent par-dessus le score,
+        /// qu'elles ne touchent pas, et sous le panneau d'un menu, qui les remplace.</para>
+        /// </remarks>
+        static void BuildTouchHud(GameManager manager, MenuController menu)
+        {
+            var canvasGo = new GameObject("TouchHud");
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 5;
+
+            var scaler = canvasGo.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ConstantPixelSize;
+            scaler.scaleFactor = 1f;
+
+            // Pas de GraphicRaycaster : ces images ne sont pas des boutons uGUI. C'est TouchInput
+            // qui lit la dalle, et lui seul — un raycaster ici volerait les appuis du menu.
+
+            var touch = canvasGo.AddComponent<TouchHud>();
+            touch.manager = manager;
+            touch.menu = menu;
+            touch.roundedSprite = LoadSprite("rounded.png");
+            touch.discSprite = LoadSprite("disc.png");
+            touch.triangleSprite = LoadSprite("triangle.png");
+            touch.squareSprite = LoadSprite("square.png");
+        }
+
+        /// <summary>
+        /// Le panneau qui s'interpose quand un appareil tactile est tenu en portrait.
+        /// </summary>
+        /// <remarks>
+        /// Au-dessus de tout, tampon de build compris : c'est le seul écran dont le message doive
+        /// rester lisible quoi qu'il arrive derrière.
+        /// </remarks>
+        static void BuildOrientationGate(MenuController menu)
+        {
+            var canvasGo = new GameObject("OrientationGate");
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.sortingOrder = 500;
+
+            var scaler = canvasGo.AddComponent<CanvasScaler>();
+            // ⚠ Référence PORTRAIT, contrairement à tout le reste de l'interface. Ce panneau est le
+            // seul écran du jeu qui ne s'affiche qu'en portrait : le mesurer sur les 1920 de large
+            // du paysage donnait un facteur d'échelle de 0,22 et un titre de dix-huit pixels, illisible
+            // sur l'écran même dont il doit corriger la tenue.
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(720f, 1280f);
+            // Sur la largeur : c'est elle qui manque en portrait, et un titre calé sur la hauteur
+            // sortirait par les côtés du téléphone qu'il demande justement de tourner.
+            scaler.matchWidthOrHeight = 0f;
+
+            var panel = new GameObject("Panel", typeof(RectTransform));
+            panel.transform.SetParent(canvasGo.transform, false);
+            Stretch((RectTransform)panel.transform);
+
+            var background = panel.AddComponent<Image>();
+            background.sprite = LoadSprite("square.png");
+            background.color = new Color(0.56f, 0.82f, 0.95f, 1f);
+            // Opaque, et il capte les appuis : le jeu est en attente derrière, rien de ce qu'il
+            // montre ne doit être ni vu ni touché.
+            background.raycastTarget = true;
+
+            // Un rectangle en format paysage : le dessin dit en une image ce que le texte explique.
+            var shape = new GameObject("Landscape", typeof(RectTransform));
+            shape.transform.SetParent(panel.transform, false);
+            var shapeRect = (RectTransform)shape.transform;
+            shapeRect.anchorMin = shapeRect.anchorMax = new Vector2(0.5f, 0.5f);
+            shapeRect.pivot = new Vector2(0.5f, 0.5f);
+            shapeRect.sizeDelta = new Vector2(340f, 200f);
+            shapeRect.anchoredPosition = new Vector2(0f, 170f);
+
+            var shapeImage = shape.AddComponent<Image>();
+            shapeImage.sprite = LoadSprite("rounded.png");
+            shapeImage.type = Image.Type.Sliced;
+            shapeImage.color = new Color(1f, 0.98f, 0.93f, 0.85f);
+            shapeImage.raycastTarget = false;
+
+            // Les boîtes ne se recouvrent pas : CreateText laisse le texte déborder de la sienne
+            // (Overflow), si bien que deux boîtes voisines mais trop proches donnent deux lignes
+            // superposées — ce qui ne se voit qu'à l'écran, jamais dans la hiérarchie.
+            CreateText(panel.transform, "Title", "Tournez l'appareil", 58, TextAnchor.MiddleCenter,
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, 20f),
+                new Vector2(660f, 80f), Vector2.zero, new Color(0.10f, 0.33f, 0.58f), false);
+
+            CreateText(panel.transform, "Body", "Smily Volley se joue en largeur :\nle terrain n'entre pas dans la hauteur.",
+                32, TextAnchor.MiddleCenter,
+                new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, -90f),
+                new Vector2(660f, 130f), Vector2.zero, new Color(0.16f, 0.30f, 0.44f), false);
+
+            var gate = canvasGo.AddComponent<OrientationGate>();
+            gate.menu = menu;
+            gate.panel = panel;
         }
 
         /// <summary>

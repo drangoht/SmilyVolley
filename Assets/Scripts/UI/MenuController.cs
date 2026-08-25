@@ -240,7 +240,21 @@ namespace SmilyVolley
 
         void Update()
         {
-            if (IsOpen) AnimateOpening();
+            if (IsOpen)
+            {
+                AnimateOpening();
+                RefreshFooterOnInputSwitch();
+            }
+
+            // ⚠ Sur mobile, **Échap n'existe pas**. Sans ce bouton, une partie ne serait ni
+            // interruptible ni quittable, et le joueur n'aurait d'autre issue que de fermer
+            // l'onglet. Lu avant le clavier — et hors de la garde ci-dessous, qui rendrait la
+            // pause tactile impossible sur un appareil sans clavier.
+            if (!IsOpen && TouchInput.PausePressedThisFrame())
+            {
+                Open(Screen.Pause);
+                return;
+            }
 
             Keyboard keyboard = Keyboard.current;
             if (keyboard == null) return;
@@ -486,9 +500,13 @@ namespace SmilyVolley
             if (titleText != null) titleText.text = "SMILY VOLLEY";
 
             entries.Add(Action("Jouer contre l'ordinateur", () => StartMatch(true)));
-            entries.Add(Action("Jouer à deux sur le même clavier", () => StartMatch(false)));
+            // « Même clavier » devient faux dès qu'il n'y en a pas : au doigt, les deux joueurs se
+            // partagent l'écran, chacun ses trois boutons de son côté.
+            entries.Add(Action(TouchInput.Active
+                ? "Jouer à deux sur le même écran"
+                : "Jouer à deux sur le même clavier", () => StartMatch(false)));
             entries.Add(Action("Options", () => Open(Screen.Options)));
-            entries.Add(Action("Quitter", Quit));
+            AddQuit();
         }
 
         void BuildPause()
@@ -499,7 +517,23 @@ namespace SmilyVolley
             entries.Add(Action("Rejouer le match", () => { if (manager != null) manager.ResetMatch(); Close(); }));
             entries.Add(Action("Options", () => Open(Screen.Options)));
             entries.Add(Action("Menu principal", () => Open(Screen.Main)));
+            AddQuit();
+        }
+
+        /// <summary>
+        /// Ajoute « Quitter », sauf là où quitter n'existe pas.
+        /// </summary>
+        /// <remarks>
+        /// ⚠ En WebGL, <c>Application.Quit</c> ne fait <b>rien</b> : un onglet ne se ferme pas
+        /// lui-même. La ligne s'affichait donc, se sélectionnait, se validait — et il ne se passait
+        /// rien. Une commande qui ne répond pas est indiscernable d'un jeu bloqué, et c'est
+        /// précisément l'écran où un joueur mobile a le moins de recours.
+        /// </remarks>
+        void AddQuit()
+        {
+#if !UNITY_WEBGL || UNITY_EDITOR
             entries.Add(Action("Quitter", Quit));
+#endif
         }
 
         void BuildOptions()
@@ -783,9 +817,55 @@ namespace SmilyVolley
             if (footerText != null) footerText.text = BuildFooter();
         }
 
+        /// <summary>
+        /// Réécrit le pied de page quand le joueur passe du clavier au doigt, ou l'inverse.
+        /// </summary>
+        /// <remarks>
+        /// Sans cela, le rappel resterait celui du périphérique en usage à l'<b>ouverture</b> du
+        /// menu — c'est-à-dire, au tout premier écran d'une partie mobile, le clavier : aucun doigt
+        /// ne s'est encore posé, et le menu accueille donc le joueur en lui parlant d'une touche
+        /// Entrée qu'il n'a pas. Le reste de la carte n'est redessiné que sur un changement de
+        /// sélection, ce que le premier contact ne provoque pas toujours.
+        /// </remarks>
+        void RefreshFooterOnInputSwitch()
+        {
+            bool touch = TouchInput.Active;
+            if (touch == footerIsTouch) return;
+
+            footerIsTouch = touch;
+            if (footerText != null) footerText.text = BuildFooter();
+        }
+
+        bool footerIsTouch;
+
+        /// <summary>
+        /// Le rappel des commandes du menu, en bas de la carte.
+        /// </summary>
+        /// <remarks>
+        /// ⚠ <b>Au doigt, chacune de ces phrases est un mensonge</b> — et ce sont les premières que
+        /// lit un joueur mobile. Il n'a ni molette, ni Entrée, ni Échap : il touche la ligne qu'il
+        /// veut, et les <c>−</c> / <c>+</c> pour régler. La règle « un menu annonce ses touches »
+        /// dit en fait « annonce comment on s'en sert » ; sans clavier, la réponse est le doigt.
+        /// Un texte peut être <b>correct et faux</b>.
+        /// </remarks>
         string BuildFooter()
         {
-            if (awaitingKey >= 0) return "Appuyez sur la touche à affecter   —   Échap : annuler";
+            if (awaitingKey >= 0)
+            {
+                // Réaffecter une touche demande un clavier : sur mobile, cette ligne ne s'affiche
+                // que si le joueur en a branché un, puisque c'est lui qui a ouvert la capture.
+                return "Appuyez sur la touche à affecter   —   Échap : annuler";
+            }
+
+            if (TouchInput.Active)
+            {
+                return current switch
+                {
+                    Screen.Options => "Touchez une ligne pour la choisir   —   − et + pour régler",
+                    Screen.Pause => "Touchez « Reprendre » pour retourner au match",
+                    _ => "Touchez une ligne pour la choisir",
+                };
+            }
 
             return current switch
             {

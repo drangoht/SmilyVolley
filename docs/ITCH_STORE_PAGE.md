@@ -21,8 +21,9 @@
 
 ## 2. Description courte (listes itch, 1–2 phrases)
 
-> Volley de plage à deux blobs, dans la lignée de *Blobby Volley*. Trois touches par joueur,
-> à deux sur le même clavier ou contre l'ordinateur, jouable dans le navigateur.
+> Volley de plage à deux blobs, dans la lignée de *Blobby Volley*. Trois commandes par joueur,
+> à deux sur le même clavier — ou sur le même écran, au doigt — ou contre l'ordinateur.
+> Jouable dans le navigateur, sur ordinateur comme sur téléphone.
 
 ---
 
@@ -40,8 +41,8 @@ son blob, pas à appuyer plus vite.
 
 ### Ce qu'il y a dans la partie
 
-- **À deux sur le même clavier**, ou **contre l'ordinateur** — cinq niveaux, de Tranquille à
-  Implacable.
+- **À deux sur le même clavier** — ou sur le **même écran au doigt**, chacun son bord —, ou
+  **contre l'ordinateur** : cinq niveaux, de Tranquille à Implacable.
 - **Le placement donne la direction, l'élan donne la vitesse.** Un blob immobile renvoie au
   plancher, un blob qui retombe sur la balle lui ajoute sa chute : le smash sort à 20 u/s là où
   un échange calme tourne à 5. Une balle rapide perd la moitié de son excès à chaque frappe et
@@ -70,7 +71,19 @@ rejoue parce que le point précédent s'est joué de peu.
 `Tab` bascule entre « contre l'ordinateur » et « deux joueurs ». `R` relance le match.
 `Échap` ouvre la pause. Toutes les touches se réaffectent dans les options.
 
-**Clavier obligatoire** : le jeu ne se joue ni à la souris ni au doigt.
+### Au doigt, sur téléphone et tablette
+
+Le jeu se joue aussi **au doigt, à un comme à deux joueurs**, en tenant l'appareil **en
+largeur**. Les commandes apparaissent à l'écran dès le premier contact : un pavé
+gauche/droite et un bouton de saut par joueur, plus un bouton de pause en haut à droite —
+seul accès au menu, puisqu'il n'y a pas d'Échap.
+
+- **À deux**, chacun tient son bord de l'écran avec ses trois boutons.
+- **Contre l'ordinateur**, les commandes s'écartent aux deux bouts : déplacement sous le
+  pouce gauche, saut sous le pouce droit.
+
+En portrait, un panneau demande de tourner l'appareil : le terrain ne tient pas dans la
+hauteur.
 
 ---
 
@@ -82,14 +95,14 @@ rejoue parce que le point précédent s'est joué de peu.
 | Release status | Released |
 | Pricing | Free (No payments) |
 | Uploads | dossier web poussé par butler sur le canal `html5`, coché « play in browser » |
-| Viewport | **1280 × 720**, cadre 16/9 — la page centre le jeu sur un fond de plage |
+| Viewport | **1280 × 720**, cadre 16/9 sur un fond de plage ; sur mobile, la page passe en plein écran |
 | Fullscreen button | activé |
-| Mobile friendly | **non** (jeu au clavier) |
+| Mobile friendly | **oui** — paysage uniquement, commandes tactiles à l'écran, 1 et 2 joueurs |
 | Genre | Sports |
 | Made with | Unity |
 | Average session | A few minutes |
 | Languages | French |
-| Inputs | Keyboard |
+| Inputs | Keyboard, Touchscreen |
 | Accessibility | Configurable controls |
 
 ---

@@ -2,7 +2,36 @@
 <html lang="fr">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+
+  <!--
+    ⚠ CE FICHIER EST LA MOITIÉ DU PORTAGE MOBILE.
+    Unity ne peut rien contre ce qui se passe AVANT lui : le zoom du navigateur, le défilement de
+    la page, le geste de retour depuis le bord, l'appui long qui ouvre un menu système, la barre
+    d'URL qui mange le bas de l'écran — donc le pavé directionnel. Aucun de ces défauts ne se voit
+    dans l'éditeur, aucun ne lève d'erreur, et chacun rend le jeu injouable au doigt. Ils se règlent
+    tous ici, en CSS et en quatre écouteurs.
+
+    `maximum-scale=1` + `user-scalable=no` : sans eux, un double-appui pour sauter ZOOME la page.
+    `viewport-fit=cover` : le canevas passe sous l'encoche plutôt que de laisser deux bandes.
+  -->
+  <meta name="viewport"
+        content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, shrink-to-fit=no, viewport-fit=cover">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#8fd0f2">
+
+  <!--
+    ⚠⚠ CETTE PAGE NE DOIT JAMAIS ÊTRE MISE EN CACHE — et c'est le maillon dont dépendent tous les
+    autres. Elle est la seule à porter l'identifiant de build qui invalide le chargeur, le wasm et
+    les données. Gardée en cache, elle continue de désigner les fichiers de l'ancien build : le
+    garde-cache existe, il est correct, et il ne s'applique jamais. Elle pèse quelques kilo-octets,
+    la retélécharger à chaque lancement ne coûte rien.
+  -->
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+
   <title>{{{ PRODUCT_NAME }}}</title>
   <meta name="description" content="Le beach volley des Blobs souriants, jouable dans le navigateur.">
   <link rel="icon" type="image/png" href="TemplateData/favicon.png">
@@ -27,6 +56,17 @@
       background: var(--ciel);
       font-family: "Fredoka", system-ui, sans-serif;
       color: var(--encre);
+
+      /* Le doigt ne fait JAMAIS défiler, zoomer ni rafraîchir : il joue. `touch-action: none`
+         supprime au passage le délai de 300 ms que certains navigateurs gardent pour distinguer
+         un appui d'un double-appui — délai qui, sur un saut, se ressent comme une entrée molle. */
+      touch-action: none;
+      overscroll-behavior: none;
+
+      -webkit-user-select: none;
+      user-select: none;
+      -webkit-touch-callout: none;   /* appui long = menu « copier l'image » sur iOS, sinon */
+      -webkit-tap-highlight-color: transparent;
     }
 
     /* Le jeu est cadré en 16/9 : le fond déborde derrière, il ne doit donc pas
@@ -44,6 +84,17 @@
       /* Sans cela le navigateur lisse le rendu au redimensionnement. */
       image-rendering: auto;
       outline: none;
+      touch-action: none;
+    }
+
+    /* Sur mobile, le jeu prend tout : le cadre 16/9 centré est un luxe de fenêtre de bureau, et
+       sur un téléphone il rendrait les boutons tactiles plus petits pour rien. `dvh` suit la barre
+       d'URL qui se rétracte — sans quoi le bas du jeu, donc le pavé directionnel, se retrouve
+       caché derrière elle ; `100%` reste le repli des navigateurs qui l'ignorent. */
+    body.mobile canvas {
+      width: 100vw !important;
+      height: 100% !important;
+      height: 100dvh !important;
     }
 
     /* -------------------------------------------------------------- attente */
@@ -103,6 +154,7 @@
       margin: 0;
       font-size: 0.95rem;
       opacity: 0.75;
+      text-align: center;
     }
 
     /* Message d'erreur : discret, mais lisible sans ouvrir la console. */
@@ -144,12 +196,29 @@
     var jauge = document.querySelector("#jauge");
     var etat = document.querySelector("#etat");
     var alerte = document.querySelector("#alerte");
+    var commandes = document.querySelector("#commandes");
 
-    // Le jeu est composé pour du 16/9 : on garde ce cadre et on centre, plutôt
-    // que d'étirer la plage à la fenêtre.
+    // Un navigateur mobile, ou une machine sans souris. `maxTouchPoints` est le seul test fiable :
+    // la chaîne d'agent utilisateur ment (mode bureau d'un téléphone, iPad qui se déclare Mac).
+    // Il décide de trois choses : le cadrage, la note d'accueil, et le rapport de pixels.
+    var mobile = (navigator.maxTouchPoints || 0) > 1 ||
+                 /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
+    if (mobile) {
+      document.body.classList.add("mobile");
+      // ⚠ « A / D / W » n'est pas seulement inutile au doigt : c'est la première phrase que lit un
+      // joueur mobile, et elle lui parle d'un clavier qu'il n'a pas.
+      commandes.textContent = "Tenez l'appareil en largeur — les commandes s'affichent à l'écran.";
+    }
+
+    // Le jeu est composé pour du 16/9 : sur un écran de bureau on garde ce cadre et on centre,
+    // plutôt que d'étirer la plage à la fenêtre. Sur mobile, le CSS ci-dessus prend le relais et
+    // le jeu occupe tout — la caméra du jeu, elle, garde le terrain entier visible.
     var ratio = {{{ WIDTH }}} / {{{ HEIGHT }}};
 
     function cadrer() {
+      if (mobile) return;
+
       var largeur = window.innerWidth;
       var hauteur = window.innerHeight;
       if (largeur / hauteur > ratio) largeur = Math.round(hauteur * ratio);
@@ -160,6 +229,8 @@
 
     cadrer();
     window.addEventListener("resize", cadrer);
+    // La rotation d'un téléphone ne produit pas toujours un `resize` au bon moment.
+    window.addEventListener("orientationchange", cadrer);
 
     // Les touches du jeu font défiler la page si on les laisse au navigateur :
     // la barre d'espace saute d'un écran, les flèches suivent le curseur.
@@ -175,7 +246,7 @@
       var ctx = window.WEBAudio && window.WEBAudio.audioContext;
       if (ctx && ctx.state !== "running") ctx.resume();
     }
-    ["pointerdown", "keydown"].forEach(function (nom) {
+    ["pointerdown", "touchstart", "keydown"].forEach(function (nom) {
       window.addEventListener(nom, reveillerAudio);
     });
 
@@ -203,6 +274,13 @@
       showBanner: signaler,
     };
 
+    // ⚠ LE RÉGLAGE DE PERFORMANCE LE PLUS RENTABLE DU PORTAGE MOBILE.
+    // Un téléphone récent annonce un rapport de pixels de 3 : Unity rendrait alors NEUF fois plus
+    // de pixels que la dalle logique n'en montre, sur un GPU qui vaut le dixième d'une carte de
+    // bureau. Le jeu est fait d'aplats et d'un maillage de gelée — il n'a presque rien à y gagner,
+    // et la cadence, elle, s'effondre sans qu'aucune erreur ne le dise.
+    if (mobile) config.devicePixelRatio = 1;
+
     createUnityInstance(canvas, config, function (avancement) {
       jauge.style.width = (avancement * 100) + "%";
       if (avancement > 0.9) etat.textContent = "On gonfle le ballon…";
@@ -211,10 +289,42 @@
       attente.classList.add("parti");
       donnerLeClavier();
       reveillerAudio();
+      installerGestesMobiles(instance);
     }).catch(function (erreur) {
       etat.textContent = "Le jeu n'a pas pu démarrer.";
       signaler(erreur, "error");
     });
+
+    /**
+     * Les trois gestes du navigateur qu'il faut désarmer, et le seul qu'il faut armer.
+     */
+    function installerGestesMobiles(instance) {
+      // 1. L'appui long ouvre le menu contextuel par-dessus le jeu. Il ne se supprime qu'ici :
+      //    `-webkit-touch-callout` ne couvre qu'iOS.
+      canvas.addEventListener("contextmenu", function (e) { e.preventDefault(); }, { passive: false });
+
+      // 2. Le double-appui zoome encore sur iOS malgré la balise viewport — c'est un geste séparé,
+      //    et il tombe exactement sur le rythme d'un joueur qui saute deux fois de suite.
+      canvas.addEventListener("gesturestart", function (e) { e.preventDefault(); }, { passive: false });
+
+      // 3. Le glissement depuis le bord déclenche « page précédente » sur Android — et glisser
+      //    d'un bord est justement ce qu'on fait sur un pavé directionnel collé au bord. Un
+      //    `touchmove` non passif est le seul moyen de le retenir.
+      canvas.addEventListener("touchmove", function (e) { e.preventDefault(); }, { passive: false });
+
+      if (!mobile) return;
+
+      // 4. Le plein écran, lui, doit être ARMÉ — et il exige un geste de l'utilisateur : l'appeler
+      //    au chargement échoue silencieusement. Une seule fois, au premier contact ; ensuite le
+      //    joueur reste maître, le geste système de sortie continue de fonctionner.
+      //    Sur iPhone l'API n'existe pas : le `try` évite qu'une exception n'arrête le script.
+      var arme = true;
+      canvas.addEventListener("pointerdown", function () {
+        if (!arme) return;
+        arme = false;
+        try { instance.SetFullscreen(1); } catch (e) { /* iOS : pas de plein écran, on joue quand même */ }
+      });
+    }
   </script>
 </body>
 </html>

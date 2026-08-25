@@ -72,6 +72,9 @@ namespace SmilyVolley
         AiBlobInput rightAi;
         HumanBlobInput leftHuman;
 
+        // Périphérique auquel le HUD s'adresse en ce moment. Voir Update.
+        bool hintIsTouch;
+
         /// <summary>Un point vient d'être attribué au camp indiqué.</summary>
         public event System.Action<Side> PointScored;
 
@@ -112,6 +115,12 @@ namespace SmilyVolley
 
         void Update()
         {
+            // Le passage du clavier au doigt, ou l'inverse, réécrit tout ce que le HUD annonce.
+            // Suivi ici plutôt qu'au moment du contact : le joueur peut brancher un clavier, ou
+            // poser son premier doigt, à n'importe quelle image — y compris pendant un échange,
+            // où rien d'autre ne redessine le bandeau.
+            if (TouchInput.Active != hintIsTouch) ApplyMode();
+
             if (InputLocked) return;
 
             Keyboard keyboard = Keyboard.current;
@@ -160,17 +169,34 @@ namespace SmilyVolley
 
             if (hud != null)
             {
-                hud.SetMode(rightPlayerIsAi ? "1 joueur — contre l'ordinateur" : "2 joueurs — même clavier");
+                // « Même clavier » cesse d'être vrai dès qu'il n'y en a pas : au doigt, les deux
+                // joueurs se partagent l'écran, chacun ses boutons de son côté.
+                string duo = TouchInput.Active ? "2 joueurs — même écran" : "2 joueurs — même clavier";
+                hud.SetMode(rightPlayerIsAi ? "1 joueur — contre l'ordinateur" : duo);
                 hud.SetHint(BuildHint());
             }
+
+            hintIsTouch = TouchInput.Active;
         }
 
         /// <summary>
         /// Compose l'aide à l'écran avec les caractères réellement imprimés sur les touches :
         /// « Q / D » sur un clavier AZERTY, « A / D » sur un QWERTY, sans rien coder en dur.
         /// </summary>
+        /// <remarks>
+        /// <para>⚠ <b>Au doigt, tout ce bandeau est faux</b>, et il est en plus <b>en travers du
+        /// chemin</b> : il occupe le bas de l'écran, c'est-à-dire exactement la bande où sont posés
+        /// le pavé directionnel et le bouton de saut. Il se tait donc — les commandes tactiles sont
+        /// dessinées, et c'est là toute leur raison d'être ; décrire par écrit des boutons qu'on
+        /// voit, en les recouvrant, serait du bruit deux fois.</para>
+        ///
+        /// <para>Ce que le bandeau annonçait et qui n'est plus visible — changer de mode, rejouer —
+        /// passe par le bouton de pause, seul endroit où ces actions existent sans clavier.</para>
+        /// </remarks>
         string BuildHint()
         {
+            if (TouchInput.Active) return string.Empty;
+
             string move = "Q / D";
             string jump = "Z";
 
@@ -348,7 +374,14 @@ namespace SmilyVolley
             SetBlobsFrozen(true);
             if (hud != null)
             {
-                hud.ShowMessage(winner.Label() + " gagne le match !\nAppuyez sur " + HumanBlobInput.LabelOf(restartKey) + " pour rejouer");
+                // ⚠ Sans clavier, « Appuyez sur R » enferme le joueur sur l'écran de fin : c'est la
+                // dernière phrase d'un match, et elle désignerait une touche qui n'existe pas. La
+                // relance passe alors par le bouton de pause, seul endroit où elle est atteignable.
+                string relance = TouchInput.Active
+                    ? "Touchez Pause, en haut à droite, pour rejouer"
+                    : "Appuyez sur " + HumanBlobInput.LabelOf(restartKey) + " pour rejouer";
+
+                hud.ShowMessage(winner.Label() + " gagne le match !\n" + relance);
             }
 
             MatchWon?.Invoke(winner);

@@ -16,9 +16,25 @@ namespace SmilyVolley
     /// Le caractère réellement imprimé est disponible via <see cref="LabelOf"/>, qui interroge
     /// la disposition active du système : c'est ce qui permet à l'aide à l'écran d'afficher
     /// les bonnes lettres sans rien coder en dur.
+    ///
+    /// <para><b>Le doigt entre ici, et pas ailleurs.</b> Sur mobile, les commandes viennent de
+    /// <see cref="TouchInput"/> ; elles s'ajoutent au clavier au lieu de le remplacer, si bien
+    /// qu'un joueur passe de l'un à l'autre en cours de partie sans qu'aucun code de bascule
+    /// n'existe. C'est aussi ce qui rend le mode contre l'ordinateur correct sans effort : le blob
+    /// de droite y a ce composant <b>désactivé</b> au profit de <see cref="AiBlobInput"/>, donc le
+    /// tactile suit exactement les camps qu'un humain tient — un troisième fichier d'entrées aurait
+    /// eu à redécouvrir cette règle, et à la maintenir en accord.</para>
+    ///
+    /// <para>La géométrie et la mémoire des doigts, elles, ne sont pas ici : ce composant ne fait
+    /// que consulter un état déjà calculé.</para>
     /// </summary>
     public class HumanBlobInput : BlobInput
     {
+        [Header("Identité")]
+        [Tooltip("Le camp dont ce composant lit les commandes tactiles. Le clavier, lui, " +
+                 "est identifié par ses seules touches.")]
+        public Side side = Side.Left;
+
         [Header("Touches principales")]
         public Key leftKey = Key.A;
         public Key rightKey = Key.D;
@@ -43,6 +59,11 @@ namespace SmilyVolley
         {
             get
             {
+                // Le doigt est lu d'abord et rend la main s'il ne demande rien : sur une tablette
+                // avec clavier, les deux périphériques cohabitent, et aucun ne doit annuler l'autre.
+                float touch = TouchInput.Horizontal(side);
+                if (touch != 0f) return Mathf.Clamp(touch, -1f, 1f);
+
                 if (!EnsureBound()) return 0f;
 
                 float h = 0f;
@@ -52,7 +73,8 @@ namespace SmilyVolley
             }
         }
 
-        public override bool JumpHeld => EnsureBound() && IsPressed(jump, altJump);
+        public override bool JumpHeld
+            => TouchInput.JumpHeld(side) || (EnsureBound() && IsPressed(jump, altJump));
 
         /// <summary>Rebranche les contrôles si le clavier courant a changé. Faux s'il n'y en a aucun.</summary>
         bool EnsureBound()

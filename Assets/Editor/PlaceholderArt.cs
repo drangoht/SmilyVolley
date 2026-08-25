@@ -44,6 +44,10 @@ namespace SmilyVolley.EditorTools
             // version web.
             Save(CreateTriangle(), "triangle.png", new Vector2(0.5f, 0.5f), 100f);
 
+            // Disque plein des boutons tactiles (saut, pause). Le sprite de balle ne pouvait pas
+            // servir : il porte ses quartiers et son contour, qu'aucune teinte ne fait disparaître.
+            Save(CreateDisc(), "disc.png", new Vector2(0.5f, 0.5f), 100f);
+
             // Panneaux du menu, découpés en neuf tranches : la bordure vaut le rayon, si
             // bien qu'un panneau s'étire à n'importe quelle taille sans déformer ses coins.
             Save(CreateRounded(PanelRadius), "panel.png", new Vector2(0.5f, 0.5f), 100f,
@@ -238,6 +242,36 @@ namespace SmilyVolley.EditorTools
                     float d = Mathf.Max(bottom, Mathf.Max(right, left));
 
                     float alpha = Mathf.Clamp01(0.5f - d * size * 0.5f);
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
+                }
+            }
+
+            return Build(size, size, pixels);
+        }
+
+        /// <summary>
+        /// Disque blanc, à teinter. Les boutons tactiles s'en servent pour leur fond rond.
+        /// </summary>
+        /// <remarks>
+        /// L'anti-crénelage se fait sur un anneau d'un pixel de large — sans lui, un bouton de
+        /// deux centimètres de diamètre montre un bord en escalier que le filtrage bilinéaire
+        /// n'efface pas, puisqu'il agrandit le défaut au lieu de l'adoucir.
+        /// </remarks>
+        static Texture2D CreateDisc()
+        {
+            const int size = 128;
+            var pixels = new Color[size * size];
+            float edge = 2f / size;
+
+            for (int y = 0; y < size; y++)
+            {
+                for (int x = 0; x < size; x++)
+                {
+                    float u = (x + 0.5f) / size * 2f - 1f;
+                    float v = (y + 0.5f) / size * 2f - 1f;
+                    float d = Mathf.Sqrt(u * u + v * v);
+
+                    float alpha = Mathf.Clamp01((1f - d) / edge);
                     pixels[y * size + x] = new Color(1f, 1f, 1f, alpha);
                 }
             }
