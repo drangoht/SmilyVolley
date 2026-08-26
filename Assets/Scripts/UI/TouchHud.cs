@@ -65,6 +65,7 @@ namespace SmilyVolley
         int laidOutWidth = -1;
         int laidOutHeight = -1;
         bool laidOutSolo;
+        Side laidOutSoloSide;
         bool laidOutBuilt;
 
         void Awake()
@@ -77,7 +78,7 @@ namespace SmilyVolley
         {
             // Un composant désactivé ne dessine plus : laisser la porte ouverte donnerait des
             // commandes invisibles qui répondent encore.
-            TouchInput.SetGameControls(false, TouchInput.Solo);
+            TouchInput.SetGameControls(false, TouchInput.Solo, TouchInput.SoloSide);
         }
 
         /// <summary>
@@ -88,6 +89,7 @@ namespace SmilyVolley
         void LateUpdate()
         {
             bool solo = manager == null || manager.rightPlayerIsAi;
+            Side soloSide = manager != null ? manager.SoloSide : Side.Left;
             bool inMatch = menu == null || !menu.IsOpen;
             bool visible = inMatch && TouchInput.Active;
 
@@ -97,27 +99,31 @@ namespace SmilyVolley
             // Fermer la porte tant que rien n'est visible **avalerait donc systématiquement le
             // premier geste de la partie**. La condition qui protège vraiment quelque chose est
             // l'autre : hors match, tout doigt appartient à uGUI.
-            TouchInput.SetGameControls(inMatch, solo);
+            TouchInput.SetGameControls(inMatch, solo, soloSide);
 
             if (canvas != null) canvas.enabled = visible;
             if (!visible) return;
 
-            EnsureLayout(solo);
-            Paint(solo);
+            EnsureLayout(solo, soloSide);
+            Paint(solo, soloSide);
         }
 
         // ------------------------------------------------------------------ agencement
 
-        void EnsureLayout(bool solo)
+        void EnsureLayout(bool solo, Side soloSide)
         {
             int w = Screen.width;
             int h = Screen.height;
 
-            if (laidOutBuilt && w == laidOutWidth && h == laidOutHeight && solo == laidOutSolo) return;
+            // Le camp joué en solo entre dans la clé : il déplace le bouton de saut d'un bord à
+            // l'autre. Absent d'ici, le changement de camp ne se verrait qu'à la rotation suivante.
+            if (laidOutBuilt && w == laidOutWidth && h == laidOutHeight
+                && solo == laidOutSolo && soloSide == laidOutSoloSide) return;
 
             laidOutWidth = w;
             laidOutHeight = h;
             laidOutSolo = solo;
+            laidOutSoloSide = soloSide;
 
             if (!laidOutBuilt)
             {
@@ -131,9 +137,10 @@ namespace SmilyVolley
             Place(right, Side.Right, solo, w, h);
             PlacePause(w, h);
 
-            // Contre l'ordinateur, le blob de droite n'a pas de mains : son bouton n'a rien à
+            // Contre l'ordinateur, le blob que l'IA tient n'a pas de mains : son bouton n'a rien à
             // commander, et le laisser à l'écran inviterait à presser ce qui ne répond pas.
-            SetActive(right, !solo);
+            SetActive(left, !solo || soloSide == Side.Left);
+            SetActive(right, !solo || soloSide == Side.Right);
         }
 
         void Place(SideControls controls, Side side, bool solo, float w, float h)
@@ -162,10 +169,10 @@ namespace SmilyVolley
 
         // ------------------------------------------------------------------ teintes et repère
 
-        void Paint(bool solo)
+        void Paint(bool solo, Side soloSide)
         {
-            PaintSide(left, Side.Left);
-            if (!solo) PaintSide(right, Side.Right);
+            if (!solo || soloSide == Side.Left) PaintSide(left, Side.Left);
+            if (!solo || soloSide == Side.Right) PaintSide(right, Side.Right);
 
             bool pausePressed = TouchInput.PauseDrawnHeld;
             pauseDisc.color = pausePressed ? heldColor : idleColor;

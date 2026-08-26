@@ -99,6 +99,13 @@ namespace SmilyVolley.EditorTools
             // Mode par défaut : le blob de droite est piloté par l'IA.
             right.GetComponent<HumanBlobInput>().enabled = false;
 
+            // L'autre camp reçoit la SIENNE, éteinte. Le joueur peut choisir de tenir la droite
+            // contre l'ordinateur, et l'IA doit alors prendre la gauche : une IA ajoutée à
+            // l'exécution n'aurait ni balle ni murs, et un composant qu'on croit là ne se signale
+            // absent que par un blob parfaitement immobile.
+            AiBlobInput leftAi = ConfigureAi(left, ball);
+            leftAi.enabled = false;
+
             HudController hud = BuildHud();
             GameManager manager = BuildGameManager(ball, left, right, hud, ai);
 

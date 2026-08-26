@@ -332,7 +332,7 @@ deux périphériques cohabitent, aucun n'annule l'autre.
 
 | Action | Geste |
 |---|---|
-| Se déplacer | Glisser n'importe où dans sa moitié d'écran |
+| Se déplacer | Glisser n'importe où dans sa moitié d'écran, **y compris tout en bas** |
 | Sauter | Le bouton rond posé dans sa moitié |
 | Pause | Le bouton rond en haut à droite — `Échap` n'existe pas sur un téléphone |
 
@@ -358,6 +358,36 @@ blob de son adversaire — et courir vers le filet est précisément ce qu'on fa
 jeu. Le saut, lui, n'a aucune mémoire : son bouton est fixe, un doigt commande ce qu'il
 recouvre en ce moment. Un seul doigt pilote un camp : le second posé ne vole pas la main
 au premier.
+
+**« Même tout en bas », que le bandeau dit désormais, est un conseil et non une tolérance.** Seule l'abscisse du doigt
+est lue : le joueur peut donc piloter au ras du sable et rendre à sa vue l'écran que sa main
+couvre. C'est la seule réponse que ce schéma a au défaut qu'il s'est créé — **la surface de
+commande est devenue la surface de jeu**, et la main se pose par défaut là où l'œil
+regarde. La propriété existait dès le premier jour ; le bandeau d'aide le dit depuis, faute
+de quoi elle n'existait pour personne.
+
+⚠ **Le coin bas extérieur refuse les doigts qui s'y posent** (`TouchZones.IsPalmRest` : un
+rayon de bouton de large, 3 % de l'écran de haut — quinze millimètres sur deux environ). Ce qui touche la dalle à cet
+endroit en paysage n'est pas le pouce qui joue mais **sa base** : lue comme une
+désignation, elle plaque le blob contre son mur et l'y tient. Le symptôme est un blob qui
+« ne répond plus » alors que le jeu obéit parfaitement, à une main que le joueur ne sait
+pas avoir posée. Le refus ne vaut que pour les doigts qui **arrivent** — un glissement déjà
+engagé garde son camp où qu'il aille, et l'arracher en pleine course coûterait le point que
+la zone est censée sauver.
+
+⚠ **Ces deux mesures sont une estimation, pas un relevé.** Ce qu'il faudrait connaître est
+la position du *centre* du contact que produit la base d'un pouce ; elle ne s'obtient que
+sur un vrai appareil. Trop basse, la zone laisse passer la main qu'elle vise ; trop haute,
+elle refuse un doigt qui joue — et ce second défaut serait pire que celui qu'on corrige.
+Un premier dimensionnement prenait un *diamètre* de bouton et couvrait le tiers de la
+moitié du joueur, jusqu'au mur : mesuré à l'éditeur avant d'être livré.
+
+**En solo, le camp se choisit** (§ 9.2, *Camp du joueur*), et c'est le seul réglage
+d'ergonomie tactile du jeu : il met le glissement — la tâche fine — sous la main habile.
+Le côté de l'écran et le camp de terrain **ne se choisissent pas séparément**, puisque le
+doigt pointe le terrain : le réglage déplace donc ensemble le joueur, l'ordinateur, le
+bouton de saut, et jusqu'aux touches annoncées par le bandeau. Les deux blobs portent pour
+cela une `AiBlobInput`, éteinte sur celui que l'humain tient.
 
 La géométrie de tout cela — marges, rayons, seuil de 44 px sous lequel une cible n'est
 plus atteignable au doigt — vit dans `TouchZones`, l'état des doigts dans `TouchInput`,
@@ -670,6 +700,7 @@ dessus. C'est l'entrée qui le déclare, par `Entry.Repeats`.
 |---|---|
 | **Commandes** | Les six touches, réaffectables une à une, plus un retour à la disposition d'origine |
 | **Adversaire** | Ordinateur ou humain ; difficulté sur cinq crans nommés, de Tranquille à Implacable |
+| **Adversaire** | Deuxième joueur (ordinateur ou humain), difficulté nommée, **camp du joueur** en solo |
 | **Règles** | Points pour gagner (5 à 21), écart de deux points, touches par camp, comptage, camp qui engage |
 | **Son** | Musique et effets, par pas de 5 % |
 | **Apparence** | Style des blobs : Ferme, Molle ou Moulée |
@@ -989,6 +1020,7 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 | `Audio` *(GameAudio)* | `Jump Volume`, `Jump Pitch` | Discrétion de l'appui du saut |
 | `ImpactEffects` | `Hit / Ball Land / Blob Land / Bounce Particles` | Densité des bouffées |
 | `TouchHud` | `Idle / Held Color`, `Glyph Color`, `Marker Color` | Discrétion des commandes tactiles : elles se posent sur le terrain qu'elles cachent |
+| `GameManager` | `Solo Player On Right` | Le camp que tient le joueur contre l'ordinateur ; au doigt, la moitié d'écran où il glisse |
 
 ---
 

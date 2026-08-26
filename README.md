@@ -142,6 +142,10 @@ est gratuite. Il ne reste qu'**un seul bouton** par joueur : le saut, au coin.
    J1              J2                  pouce gauche    pouce droit
 ```
 
+> Le schéma de droite se **retourne** si le camp du joueur passe à droite : on glisse alors
+> dans la moitié droite et le bouton de saut passe au bord gauche.
+
+
 - **La vitesse reste celle du clavier.** Ce que le doigt produit est un axe borné à ±1,
   exactement comme une touche : un geste qui traverse l'écran ne fait pas courir le blob
   plus vite qu'une touche maintenue. Sans cette borne, le tactile serait *plus fort* que le
@@ -155,11 +159,34 @@ est gratuite. Il ne reste qu'**un seul bouton** par joueur : le saut, au coin.
   son adversaire* — et courir vers le filet est précisément ce qu'on fait dans ce jeu.
 - **Un seul doigt par camp** : le second posé ne vole pas la main au premier, sans quoi une
   paume à plat ferait tressauter le blob entre deux points au gré de l'ordre de lecture.
+- **Glissez où vous voulez, y compris tout en bas.** Seule l'**abscisse** du doigt est lue :
+  l'ordonnée ne veut rien dire, et le joueur peut donc piloter au ras du sable, loin des blobs
+  et de la balle qu'il regarde. Le bandeau d'aide le dit désormais en toutes lettres — la
+  propriété existait depuis le premier jour et personne ne la découvrait, parce qu'une main se
+  pose là où l'on regarde, c'est-à-dire en plein milieu du jeu.
+- **Le coin bas extérieur ignore les doigts qui s'y posent** (`TouchZones.IsPalmRest`). En
+  paysage, ce qui touche la dalle à cet endroit n'est pas le pouce qui joue mais sa base : lue
+  comme une désignation, elle envoie le blob au mur et l'y retient. Le joueur voit un blob qui
+  « ne répond plus » alors que le jeu obéit parfaitement — à une main qu'il ne sait pas avoir
+  posée. Le coin fait un rayon de bouton de large et 3 % de l'écran de haut — une quinzaine de
+  millimètres sur deux —, et ne refuse que les doigts qui **arrivent** : un glissement déjà
+  engagé le traverse sans rien perdre. ⚠ Ces deux mesures sont une **estimation** : ce qu'il
+  faudrait connaître est où tombe le *centre* du contact que produit la base d'un pouce, et
+  cela ne s'obtient que sur un vrai appareil. Un premier dimensionnement couvrait le tiers de
+  la moitié du joueur — la zone reprenait alors d'une main ce que le conseil ci-dessus donne
+  de l'autre.
 - **Une colonne claire marque l'endroit désigné.** Elle ne double pas le doigt, elle le
   corrige : le doigt cache le point qu'il touche et le blob met un instant à l'atteindre —
   sans repère, le joueur ne sait ni où il a pointé, ni si le jeu l'a entendu.
 - **Échap n'existe pas sur mobile.** Le bouton de pause, en haut à droite, est le seul
   accès au menu — donc à « rejouer », à « changer d'adversaire » et aux options.
+- **Contre l'ordinateur, le camp se choisit** (options → *Camp du joueur*). Ce n'est pas une
+  préférence esthétique : c'est ce qui met la tâche fine sous la main habile. Le côté de
+  l'écran où l'on glisse et le camp où le blob court **ne peuvent pas être choisis
+  séparément** — le doigt pointe le terrain, la moitié d'écran *est* la moitié de terrain. Le
+  réglage déplace donc le joueur, l'ordinateur, le bouton de saut et le bandeau d'aide d'un
+  seul geste. Au clavier, le joueur passe du même coup aux touches du joueur 2, et l'aide les
+  annonce.
 
 > **Ce schéma a remplacé un pavé directionnel**, et l'a fait pour une raison qu'on ne voit
 > qu'en jouant : le pavé occupait le bas de l'écran, c'est-à-dire la bande où vivent les

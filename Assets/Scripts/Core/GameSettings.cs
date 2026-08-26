@@ -28,6 +28,7 @@ namespace SmilyVolley
 
         // ----- partie -----
         public bool rightPlayerIsAi = true;
+        public bool soloPlayerOnRight = false;
         [Range(0f, 1f)] public float aiDifficulty = 0.65f;
         public int pointsToWin = 15;
         public bool requireTwoPointLead = true;
@@ -54,6 +55,7 @@ namespace SmilyVolley
             p2Left = defaults.p2Left; p2Right = defaults.p2Right; p2Jump = defaults.p2Jump;
 
             rightPlayerIsAi = defaults.rightPlayerIsAi;
+            soloPlayerOnRight = defaults.soloPlayerOnRight;
             aiDifficulty = defaults.aiDifficulty;
             pointsToWin = defaults.pointsToWin;
             requireTwoPointLead = defaults.requireTwoPointLead;
@@ -90,6 +92,7 @@ namespace SmilyVolley
             p2Jump = LoadKey("p2Jump", p2Jump);
 
             rightPlayerIsAi = LoadBool("rightPlayerIsAi", rightPlayerIsAi);
+            soloPlayerOnRight = LoadBool("soloPlayerOnRight", soloPlayerOnRight);
             aiDifficulty = Mathf.Clamp01(PlayerPrefs.GetFloat(Prefix + "aiDifficulty", aiDifficulty));
             pointsToWin = Mathf.Max(1, PlayerPrefs.GetInt(Prefix + "pointsToWin", pointsToWin));
             requireTwoPointLead = LoadBool("requireTwoPointLead", requireTwoPointLead);
@@ -114,6 +117,7 @@ namespace SmilyVolley
             SaveKey("p2Left", p2Left); SaveKey("p2Right", p2Right); SaveKey("p2Jump", p2Jump);
 
             SaveBool("rightPlayerIsAi", rightPlayerIsAi);
+            SaveBool("soloPlayerOnRight", soloPlayerOnRight);
             PlayerPrefs.SetFloat(Prefix + "aiDifficulty", aiDifficulty);
             PlayerPrefs.SetInt(Prefix + "pointsToWin", pointsToWin);
             SaveBool("requireTwoPointLead", requireTwoPointLead);
@@ -155,6 +159,7 @@ namespace SmilyVolley
             if (manager != null)
             {
                 manager.rightPlayerIsAi = rightPlayerIsAi;
+                manager.soloPlayerOnRight = soloPlayerOnRight;
                 manager.aiDifficulty = aiDifficulty;
                 manager.pointsToWin = pointsToWin;
                 manager.requireTwoPointLead = requireTwoPointLead;

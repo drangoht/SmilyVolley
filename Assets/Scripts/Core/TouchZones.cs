@@ -92,6 +92,38 @@ namespace SmilyVolley
         /// </remarks>
         public const float TouchSlop = 0.3f;
 
+        /// <summary>
+        /// Hauteur du coin de repos, en fraction de l'unité — et <see cref="MinPalmBandPx"/> au
+        /// moins.
+        /// </summary>
+        /// <remarks>
+        /// <para><b>Ce n'est pas un doigt, c'est une main.</b> En paysage, l'appareil est tenu par
+        /// ses deux bords, et ce qui touche la dalle près du coin bas extérieur n'est pas le pouce
+        /// qui joue mais sa base. Lue comme une désignation, elle envoie le blob au mur et l'y
+        /// retient — le joueur voit un blob qui « ne répond plus » alors que le jeu lui obéit
+        /// parfaitement, à une main qu'il ne sait pas avoir posée.</para>
+        ///
+        /// <para>Petite exprès : elle n'a rien à interdire au-delà de ce que la main occupe. Le
+        /// bandeau d'aide invite justement à glisser <b>en bas</b> de l'écran — c'est là que le
+        /// doigt gêne le moins la vue — et une bande généreuse reprendrait d'une main ce que le
+        /// conseil donne de l'autre.</para>
+        /// </remarks>
+        public const float PalmBandFraction = 0.03f;
+
+        /// <summary>Hauteur plancher du coin de repos, sur les écrans très bas.</summary>
+        /// <remarks>
+        /// ⚠ <b>Ces deux mesures sont une estimation, pas un relevé.</b> Ce qu'il faudrait connaître
+        /// est la position du <i>centre</i> du contact que produit la base d'un pouce, et elle ne
+        /// s'obtient que sur un vrai appareil. Trop basse, la zone laisse passer la main qu'elle
+        /// vise ; trop haute, elle refuse un doigt qui joue. Le premier défaut est celui d'avant,
+        /// le second serait pire — d'où le choix d'une zone modeste.
+        /// </remarks>
+        public const float MinPalmBandPx = 14f;
+
+        /// <summary>Hauteur du coin de repos sur cet écran.</summary>
+        public static float PalmBand(bool solo, float w, float h)
+            => Mathf.Max(MinPalmBandPx, PalmBandFraction * Unit(solo, w, h));
+
         // ------------------------------------------------------------------ unité de mesure
 
         /// <summary>Largeur minimale, en unités, pour qu'un camp loge son bouton dans SA MOITIÉ d'écran.</summary>
@@ -149,18 +181,21 @@ namespace SmilyVolley
 
         /// <summary>Centre du bouton de saut DESSINÉ d'un camp.</summary>
         /// <remarks>
-        /// Au coin <b>extérieur</b> de sa moitié — le bord de l'écran, là où tombe naturellement le
-        /// pouce de la main qui tient l'appareil. Le milieu de l'écran reste ainsi entièrement
-        /// dégagé, et rien ne se pose entre les deux joueurs.
+        /// <para>Au coin <b>extérieur</b> de sa moitié — le bord de l'écran, là où tombe
+        /// naturellement le pouce de la main qui tient l'appareil. Le milieu de l'écran reste ainsi
+        /// entièrement dégagé, et rien ne se pose entre les deux joueurs.</para>
+        ///
+        /// <para><b>En solo, le saut part dans la moitié que le joueur ne tient pas</b>, et cette
+        /// moitié dépend du camp qu'il joue : sa main de déplacement a besoin de toute la sienne,
+        /// et l'autre ne commande rien d'autre. Le paramètre <paramref name="side"/> suffit à le
+        /// dire, puisqu'en solo il ne vaut jamais que le camp du joueur.</para>
         /// </remarks>
         public static Vector2 JumpCenter(Side side, bool solo, float w, float h)
         {
             float margin = Margin(solo, w, h);
             float radius = JumpRadius(solo, w, h);
 
-            // En solo, le déplacement se glisse sous le pouce gauche : le saut part donc à droite,
-            // sous celui qui reste libre.
-            bool atRightEdge = solo || side == Side.Right;
+            bool atRightEdge = solo ? side == Side.Left : side == Side.Right;
             float x = atRightEdge ? w - margin - radius : margin + radius;
 
             return new Vector2(x, margin + radius);
@@ -233,7 +268,42 @@ namespace SmilyVolley
             float reach = JumpTouchRadius(solo, w, h);
             if ((new Vector2(x, y) - jump).sqrMagnitude <= reach * reach) return TouchTarget.Jump;
 
+            if (IsPalmRest(x, y, side, solo, w, h)) return TouchTarget.None;
+
             return IsMoveZone(x, y, side, w, h) ? TouchTarget.Move : TouchTarget.None;
+        }
+
+        /// <summary>
+        /// Le contact tombe-t-il là où la main qui TIENT l'appareil se pose ?
+        /// </summary>
+        /// <remarks>
+        /// <para>Un coin, pas une bande : le bord bas <b>extérieur</b> du camp, sur la largeur que
+        /// le bouton de saut occupe ailleurs. C'est l'endroit précis où la base du pouce touche la
+        /// dalle quand on tient un téléphone en paysage.</para>
+        ///
+        /// <para>⚠ Ce test ne s'applique qu'aux doigts qui <b>se posent</b> : <see cref="Hit"/>
+        /// n'est consulté que pour eux, un glissement déjà engagé gardant son camp où qu'il aille.
+        /// La nuance est tout le rendement du dispositif — refuser un doigt qui arrive ne coûte
+        /// rien, l'arracher en cours de course arrêterait le blob en plein échange.</para>
+        ///
+        /// <para>Le saut est testé <b>avant</b> : il vit dans ce coin-là, et l'ordre inverse le
+        /// rendrait injouable exactement sur les appareils où il est déjà le plus à l'étroit.</para>
+        /// </remarks>
+        public static bool IsPalmRest(float x, float y, Side side, bool solo, float w, float h)
+        {
+            if (y > PalmBand(solo, w, h)) return false;
+
+            // La largeur du coin : une marge et un RAYON de bouton de saut, soit une quinzaine de
+            // millimètres sur un téléphone courant. Rien à régler séparément, et la zone suit les
+            // mêmes écrans que le reste de l'agencement.
+            //
+            // ⚠ Un diamètre avait d'abord été pris : le coin couvrait alors un tiers de la moitié
+            // du joueur, c'est-à-dire tout le bas du camp jusqu'au mur — et le bandeau d'aide
+            // invite justement à glisser en bas. La zone reprenait d'une main ce que le conseil
+            // donnait de l'autre.
+            float corner = Margin(solo, w, h) + JumpRadius(solo, w, h);
+
+            return side == Side.Left ? x <= corner : x >= w - corner;
         }
     }
 }

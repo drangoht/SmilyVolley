@@ -80,16 +80,27 @@ namespace SmilyVolley
         /// </summary>
         public static bool Solo { get; private set; } = true;
 
+        /// <summary>Le camp que tient le joueur unique. N'a de sens que si <see cref="Solo"/>.</summary>
+        /// <remarks>
+        /// <b>Il ne suffit pas de savoir qu'un seul camp joue, il faut savoir lequel.</b> Le doigt
+        /// désigne un endroit du terrain en le pointant : la moitié d'écran où l'on glisse est
+        /// <i>déjà</i> la moitié de terrain où le blob court, et les deux ne peuvent pas être
+        /// choisies séparément. Un joueur qui prend le camp de droite glisse donc à droite, et son
+        /// bouton de saut passe à gauche — voir <see cref="TouchZones.JumpCenter"/>.
+        /// </remarks>
+        public static Side SoloSide { get; private set; } = Side.Left;
+
         /// <summary>Ouvre ou referme la capture des doigts, et fixe l'agencement.</summary>
         /// <remarks>
         /// La refermer <b>relâche immédiatement</b> les commandes en cours : sans cela, un doigt
         /// posé au moment où la pause s'ouvre resterait posé, et le blob repartirait vers ce point
         /// à la reprise, sans que personne n'ait rien touché.
         /// </remarks>
-        public static void SetGameControls(bool enabled, bool solo)
+        public static void SetGameControls(bool enabled, bool solo, Side soloSide)
         {
             GameControlsEnabled = enabled;
             Solo = solo;
+            SoloSide = soloSide;
             if (!enabled) ReleaseAll();
         }
 
@@ -250,6 +261,7 @@ namespace SmilyVolley
             pausePressedFrame = -1;
             GameControlsEnabled = false;
             Solo = true;
+            SoloSide = Side.Left;
 
             if (host != null) return;
 
@@ -419,11 +431,16 @@ namespace SmilyVolley
                     continue;
                 }
 
-                if (Apply(Side.Left, id, position, solo, w, h, arrived)) continue;
+                // En solo, un seul camp a un joueur : interroger l'autre reviendrait à répondre
+                // pour un blob que l'ordinateur pilote.
+                if (solo)
+                {
+                    Apply(SoloSide, id, position, solo, w, h, arrived);
+                    continue;
+                }
 
-                // En solo, seul le camp de gauche a un joueur : interroger celui de droite
-                // reviendrait à répondre pour un blob que l'ordinateur pilote.
-                if (!solo) Apply(Side.Right, id, position, solo, w, h, arrived);
+                if (Apply(Side.Left, id, position, solo, w, h, arrived)) continue;
+                Apply(Side.Right, id, position, solo, w, h, arrived);
             }
 
             pauseHeld = nextPause;

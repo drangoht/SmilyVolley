@@ -660,6 +660,12 @@ namespace SmilyVolley
                 () => settings.rightPlayerIsAi ? DifficultyNames[DifficultyIndex()] : "—",
                 d => settings.aiDifficulty = DifficultyValues[
                     Cycle(DifficultyIndex(), d, DifficultyValues.Length)]));
+            // Le camp décide de la moitié d'écran où le doigt glisse ET du bord où le saut se pose :
+            // au doigt, le joueur met la tâche fine sous sa main habile. À deux, la question ne se
+            // pose pas — chacun a déjà son côté —, d'où le tiret quand l'adversaire est humain.
+            entries.Add(Value("Camp du joueur",
+                () => settings.rightPlayerIsAi ? (settings.soloPlayerOnRight ? "Droite" : "Gauche") : "—",
+                d => settings.soloPlayerOnRight = !settings.soloPlayerOnRight));
 
             entries.Add(Header("Règles"));
             entries.Add(Value("Points pour gagner",

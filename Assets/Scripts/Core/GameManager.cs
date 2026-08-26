@@ -27,6 +27,9 @@ namespace SmilyVolley
         [Header("Mode de jeu")]
         [Tooltip("Décoché : deux joueurs sur le même clavier. La touche Tab bascule en cours de partie.")]
         public bool rightPlayerIsAi = true;
+        [Tooltip("Contre l'ordinateur : coché, le joueur tient le camp de DROITE et l'IA celui de gauche. " +
+                 "Au doigt, c'est le côté de l'écran où l'on glisse ; au clavier, les touches du joueur 2.")]
+        public bool soloPlayerOnRight = false;
         [Range(0f, 1f)] public float aiDifficulty = 0.65f;
 
         [Header("Règles")]
@@ -71,6 +74,17 @@ namespace SmilyVolley
         HumanBlobInput rightHuman;
         AiBlobInput rightAi;
         HumanBlobInput leftHuman;
+        AiBlobInput leftAi;
+
+        /// <summary>
+        /// Le camp que tient le joueur unique. Vaut le camp gauche hors solo, où il ne sert à rien.
+        /// </summary>
+        /// <remarks>
+        /// Lu par le HUD tactile, qui en déduit la moitié d'écran sensible et le bord où poser le
+        /// bouton de saut. Ces deux-là ne se choisissent pas séparément : le doigt <b>pointe</b> le
+        /// terrain, donc la moitié d'écran où l'on glisse est celle du blob qu'on déplace.
+        /// </remarks>
+        public Side SoloSide => rightPlayerIsAi && soloPlayerOnRight ? Side.Right : Side.Left;
 
         // Périphérique auquel le HUD s'adresse en ce moment. Voir Update.
         bool hintIsTouch;
@@ -147,25 +161,31 @@ namespace SmilyVolley
             }
         }
 
-        /// <summary>Active la bonne source de commandes sur le blob de droite.</summary>
+        /// <summary>Donne chaque blob à sa source de commandes : un humain, ou l'ordinateur.</summary>
+        /// <remarks>
+        /// Les <b>deux</b> camps sont réaffectés à chaque appel, et non le seul camp de droite : en
+        /// solo, l'ordinateur prend celui que le joueur ne tient pas, et ce peut être l'un ou
+        /// l'autre. Ne toucher qu'à un camp laisserait, le temps d'une bascule, soit deux humains
+        /// soit deux ordinateurs sur le terrain — le premier cas passe inaperçu jusqu'à ce qu'un
+        /// blob cesse de bouger, le second jusqu'à ce que la partie se joue toute seule.
+        /// </remarks>
         public void ApplyMode()
         {
             if (rightBlob == null) return;
 
             if (rightHuman == null) rightHuman = rightBlob.GetComponent<HumanBlobInput>();
             if (rightAi == null) rightAi = rightBlob.GetComponent<AiBlobInput>();
-
-            HumanBlobInput human = rightHuman;
-            AiBlobInput ai = rightAi;
-
-            if (human != null) human.enabled = !rightPlayerIsAi;
-            if (ai != null)
+            if (leftBlob != null)
             {
-                ai.enabled = rightPlayerIsAi;
-                ai.difficulty = aiDifficulty;
+                if (leftHuman == null) leftHuman = leftBlob.GetComponent<HumanBlobInput>();
+                if (leftAi == null) leftAi = leftBlob.GetComponent<AiBlobInput>();
             }
 
+            Bind(rightHuman, rightAi, rightPlayerIsAi && !soloPlayerOnRight);
+            Bind(leftHuman, leftAi, rightPlayerIsAi && soloPlayerOnRight);
+
             rightBlob.RefreshInput();
+            if (leftBlob != null) leftBlob.RefreshInput();
 
             if (hud != null)
             {
@@ -177,6 +197,21 @@ namespace SmilyVolley
             }
 
             hintIsTouch = TouchInput.Active;
+        }
+
+        /// <summary>Donne un blob à l'ordinateur, ou le rend à son joueur.</summary>
+        /// <remarks>
+        /// La difficulté est posée même sur l'IA qu'on éteint : le réglage doit valoir pour le camp
+        /// qu'elle reprendra, sans quoi un joueur qui change de côté au milieu d'un réglage
+        /// affronterait la difficulté d'avant.
+        /// </remarks>
+        void Bind(HumanBlobInput human, AiBlobInput ai, bool aiPlays)
+        {
+            if (human != null) human.enabled = !aiPlays;
+            if (ai == null) return;
+
+            ai.enabled = aiPlays;
+            ai.difficulty = aiDifficulty;
         }
 
         /// <summary>
@@ -197,19 +232,36 @@ namespace SmilyVolley
         {
             if (TouchInput.Active)
             {
+                // « Même tout en bas » n'est pas une politesse : SEULE L'ABSCISSE du doigt est lue.
+                // Le joueur peut donc glisser au ras du sable, loin des blobs et de la balle, et
+                // rendre à sa propre vue l'écran que sa main couvre. La propriété existe depuis le
+                // premier jour du tactile ; rien ne la disait, et personne ne la découvre seul —
+                // une main se pose là où l'on regarde, c'est-à-dire en plein milieu du jeu.
+                string half = SoloSide == Side.Right ? "droite" : "gauche";
+
                 return rightPlayerIsAi
-                    ? "Glissez le doigt à gauche de l'écran pour vous déplacer   —   le bouton pour sauter"
-                    : "Chacun glisse le doigt de son côté de l'écran   —   son bouton pour sauter";
+                    ? $"Glissez le doigt dans la moitié {half} de l'écran, même tout en bas   —   le bouton pour sauter"
+                    : "Chacun glisse de son côté de l'écran, même tout en bas   —   son bouton pour sauter";
             }
 
             string move = "Q / D";
             string jump = "Z";
 
-            if (leftHuman == null && leftBlob != null) leftHuman = leftBlob.GetComponent<HumanBlobInput>();
-            if (leftHuman != null)
+            // Les touches annoncées sont celles du blob que le joueur tient RÉELLEMENT : en solo à
+            // droite, ce sont les flèches et non Q / D. Nommer les autres enverrait le joueur
+            // presser des touches qui pilotent le blob de l'ordinateur.
+            HumanBlobInput soloHuman = SoloSide == Side.Right ? rightHuman : leftHuman;
+            if (soloHuman == null)
             {
-                move = leftHuman.LeftLabel + " / " + leftHuman.RightLabel;
-                jump = leftHuman.JumpLabel;
+                BlobController blob = SoloSide == Side.Right ? rightBlob : leftBlob;
+                if (blob != null) soloHuman = blob.GetComponent<HumanBlobInput>();
+                if (SoloSide == Side.Right) rightHuman = soloHuman; else leftHuman = soloHuman;
+            }
+
+            if (soloHuman != null)
+            {
+                move = soloHuman.LeftLabel + " / " + soloHuman.RightLabel;
+                jump = soloHuman.JumpLabel;
             }
 
             string toggle = HumanBlobInput.LabelOf(toggleModeKey);

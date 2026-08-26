@@ -17,6 +17,13 @@
 /[Aa]ssets/[Rr]esources/build_sha.txt
 /[Aa]ssets/[Rr]esources/build_sha.txt.meta
 
+# Deposes par le package Performance Testing a chaque lancement en batchmode. Ils decrivent
+# une execution, pas le jeu. Non ignores, ils salissent l'arbre a chaque build -- et un arbre
+# sale fait porter au tampon un suffixe + qui dit au joueur que sa version ne correspond a
+# aucun commit.
+/[Aa]ssets/[Rr]esources/PerformanceTestRun*.json
+/[Aa]ssets/[Rr]esources/PerformanceTestRun*.json.meta
+
 # Artefact Burst depose a la racine par le build WebGL, hors de tout dossier de build.
 /Data/
 
