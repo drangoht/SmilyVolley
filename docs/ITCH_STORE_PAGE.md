@@ -11,7 +11,7 @@
 > collé est celui de [`ITCH_STORE_PAGE_EN.md`](ITCH_STORE_PAGE_EN.md). Ce fichier-ci reste la
 > référence française — **toute correction se fait DANS LES DEUX**, sans quoi l'un des deux ment.
 >
-> **À jour pour la 1.2.0** (2026-08-26) : le build, le texte de la page et le devlog sont tous
+> **À jour pour la 1.3.0** (2026-08-26) : le build, le texte de la page et le devlog sont tous
 > les trois en ligne. Plus aucune mention du pavé nulle part.
 
 ---
@@ -90,8 +90,18 @@ vivent justement les blobs. Le saut garde son bouton, et la pause le sien, en ha
 droite : sans Échap, c'est le seul accès au menu, donc à la revanche, au changement
 d'adversaire et aux réglages.
 
+**Glissez tout en bas, c'est fait pour.** Seule la position *horizontale* du doigt est lue :
+on pilote donc au ras du sable, loin des blobs et de la balle qu'on regarde. Sans quoi c'est sa
+propre main qu'on a devant le jeu.
+
+**Contre l'ordinateur, le camp se choisit** (options → *Camp du joueur*). La moitié d'écran où
+l'on glisse et la moitié de terrain où le blob court sont la même : choisir son camp met donc la
+tâche fine sous la main qu'on préfère, et fait passer le bouton de saut au bord opposé.
+
 Un doigt reste au camp où il s'est posé, même quand il traverse le milieu de l'écran :
-courir vers le filet ne fait jamais prendre la main sur le blob d'en face.
+courir vers le filet ne fait jamais prendre la main sur le blob d'en face. Le coin bas
+extérieur, lui, ignore les doigts qui s'y posent : en paysage, ce n'est pas le pouce qui joue,
+c'est la base de la main qui tient l'appareil.
 
 En portrait, un panneau demande de tourner l'appareil : le terrain ne tient pas dans la
 hauteur.

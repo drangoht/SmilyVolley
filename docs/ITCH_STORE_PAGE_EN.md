@@ -7,13 +7,17 @@
 > Page: <https://drangoht.itch.io/smily-volley> — **web only**, pushed to the `html5` channel by
 > `tools/release_itch.ps1`.
 >
-> **Up to date for 1.2.0** (2026-08-26), the release where the blob follows your finger.
+> **Up to date for 1.3.0** (2026-08-26), the touch-ergonomics pass.
 >
-> ✅ **PUBLISHED**: 1.2.0 is live on the `html5` channel since 2026-08-26 (build #1917589, from
-> #1915521), the page description carries the touch text of § 3 and § 4, and the § 7 devlog was
+> ✅ **PUBLISHED**: 1.3.0 is live on the `html5` channel since 2026-08-26 (build #1918157, from
+> #1917589), the page description carries the touch text of § 3 and § 4, and the § 7 devlog was
 > posted as
+> [« Three fixes that all come from the same mistake »](https://drangoht.itch.io/smily-volley/devlog/1641600/three-fixes-that-all-come-from-the-same-mistake)
+> (type *General Update*, 1.3.0 build attached).
+>
+> 1.2.0 (build #1917589) and its devlog
 > [« The pad is gone »](https://drangoht.itch.io/smily-volley/devlog/1641338/the-pad-is-gone-your-blob-follows-your-finger-now)
-> (type *Major Update*, 1.2.0 build attached).
+> went out the same day.
 >
 > The English copy has been live on the page since 2026-08-25 (build #1915521). Tagline, tags,
 > embed options and the whole Classification tab were set from this file then, and the 1.1.0
@@ -83,9 +87,19 @@ exactly where the blobs live. Jump keeps its own button, and there is a **pause 
 top-right corner: with no Esc key on a phone it is the only way into the menu, and so the only way
 to replay, switch opponent or open the options.
 
+**Slide low — it works, and it is the point.** Only the *horizontal* position of your finger is
+read, so you can drive from right down at sand level, well away from the blobs and the ball you are
+watching. Without that, your own hand sits over the game.
+
+**Pick your side against the computer** (Options → Player's side). The half of the screen you slide
+in and the half of the court your blob runs in are the same half — so choosing your side puts the
+precise job under whichever hand you prefer, and moves the jump button to the opposite edge.
+
 A finger belongs to the half it landed in, even when it crosses the middle of the screen — running
-towards the net never takes over your opponent's blob. Held in portrait, a panel asks you to turn
-the device: the court is wider than it is tall, and it does not fit in the other direction.
+towards the net never takes over your opponent's blob. The very bottom outer corner ignores fingers
+that land there: in landscape that is the base of the hand holding the device, not the thumb
+playing. Held in portrait, a panel asks you to turn the device: the court is wider than it is tall,
+and it does not fit in the other direction.
 
 ### What this isn't
 
@@ -105,7 +119,8 @@ because the last point was close.
 `Esc` opens the pause menu. Every key rebinds in the options.
 
 **On a touchscreen**, hold the device in landscape: slide a finger anywhere in your own half of
-the screen to move your blob, tap the jump button to jump, and pause from the top-right corner.
+the screen — including right along the bottom — to move your blob, tap the jump button to jump, and
+pause from the top-right corner. Against the computer, your side is yours to choose in the options.
 
 ---
 
@@ -142,7 +157,54 @@ the screen to move your blob, tap the jump button to jump, and pause from the to
 
 ---
 
-## 7. Devlog — version 1.2.0
+## 7. Devlog — version 1.3.0
+
+**Title:** Three fixes that all come from the same mistake
+
+**Body:**
+
+Removing the direction pad in 1.2.0 gave the bottom of the screen back to the game. It also
+created a problem I did not see at the time: **the surface you control with is now the surface you
+play on**, and a hand lands where the eye is looking — which is the middle of the court.
+
+These three fixes all follow from that.
+
+**The game finally says what it already allowed.** Only the *horizontal* position of your finger is
+read. The vertical means nothing, so you have always been able to drive from right down at sand
+level, well away from the blobs and the ball. Nothing said so, and nobody discovers it on their
+own. The on-screen hint now reads "slide in the left half of the screen, **even right at the
+bottom**". An affordance no player discovers does not exist — the cheapest of these three fixes,
+and the one that repairs the most.
+
+**You can pick your side against the computer** (Options → Player's side). Letting players place
+their own controls is a standing recommendation in mobile-ergonomics writing, and the Android
+Blobby Volley already offers a side swap.
+
+Moving the jump button alone would have been cosmetic, and misleading. The half of the screen you
+slide in and the half of the court your blob runs in **cannot be chosen separately** — your finger
+points at the court, so the screen half *is* the court half. The setting therefore swaps the roles
+for real: the computer takes the other blob, the jump button moves to the opposite edge, and on a
+keyboard you move to player 2's keys, which the hint then names for you.
+
+**The bottom outer corner stops listening.** Held in landscape, what touches the glass down there
+is not the thumb that plays but the base of the hand that holds the device. Read as a destination,
+it pins your blob against its wall and keeps it there — and the symptom is a blob that "stops
+responding" while the game is obeying perfectly, to a hand you don't know you put down. Only
+fingers that *land* there are refused; a slide already under way passes straight through, because
+tearing a finger away mid-run would cost the very point the zone exists to save.
+
+That last one was sized wrong on the first attempt, and measuring caught it: the corner covered a
+third of the player's half, all the way to the wall — in exactly the strip the new hint invites you
+to use. It now measures about fifteen millimetres by two.
+
+**One honest limitation.** Those two numbers are an estimate. What you would need to know is where
+the *centre* of the contact made by the base of a thumb actually falls, and that only comes from a
+real device. Too short and the zone lets through the hand it is aiming at; too tall and it refuses
+a finger that is playing — and the second failure would be worse than the one being fixed.
+
+---
+
+## 8. Devlog — version 1.2.0
 
 **Title:** The pad is gone — your blob follows your finger now
 
@@ -186,7 +248,7 @@ The desktop version is unchanged: no touch control appears unless a finger touch
 
 ---
 
-## 8. Devlog — version 1.1.0 *(published 2026-08-25)*
+## 9. Devlog — version 1.1.0 *(published 2026-08-25)*
 
 **Title:** Now playable with your fingers — two players on one phone
 
