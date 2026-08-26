@@ -9,15 +9,19 @@
 >
 > **Up to date for 1.2.0** (2026-08-26), the release where the blob follows your finger.
 >
-> ✅ **BUILD PUBLISHED**: 1.2.0 was pushed to the `html5` channel on 2026-08-26 (build #1917589,
-> from #1915521). ⚠ **The page text has not been updated yet**: sections 3 and 4 below describe
-> the touch controls of 1.2.0, while the live page still describes the 1.1.0 pad. The § 7 devlog
-> is written and **not yet posted**.
+> ✅ **PUBLISHED**: 1.2.0 is live on the `html5` channel since 2026-08-26 (build #1917589, from
+> #1915521), the page description carries the touch text of § 3 and § 4, and the § 7 devlog was
+> posted as
+> [« The pad is gone »](https://drangoht.itch.io/smily-volley/devlog/1641338/the-pad-is-gone-your-blob-follows-your-finger-now)
+> (type *Major Update*, 1.2.0 build attached).
 >
-> The English copy has been live on the page since 2026-08-25 (build #1915521). The description,
-> tagline, tags, embed options and the whole Classification tab were set from this file, and the
-> 1.1.0 devlog was posted as
+> The English copy has been live on the page since 2026-08-25 (build #1915521). Tagline, tags,
+> embed options and the whole Classification tab were set from this file then, and the 1.1.0
+> devlog was posted as
 > [« Now playable with your fingers »](https://drangoht.itch.io/smily-volley/devlog/1640647/now-playable-with-your-fingers-two-players-on-one-phone).
+>
+> ⚠ The page description is a **condensed** version of § 3 and § 4, not a copy: itch shows it above
+> the fold, and the full sections below are the reference the condensation is made from.
 
 ---
 

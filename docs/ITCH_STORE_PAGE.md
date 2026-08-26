@@ -11,8 +11,8 @@
 > collé est celui de [`ITCH_STORE_PAGE_EN.md`](ITCH_STORE_PAGE_EN.md). Ce fichier-ci reste la
 > référence française — **toute correction se fait DANS LES DEUX**, sans quoi l'un des deux ment.
 >
-> **À jour pour la 1.2.0** (2026-08-26). ⚠ Le build 1.2.0 est en ligne, **le texte de la page
-> ne l'est pas encore** : elle décrit toujours le pavé de la 1.1.0.
+> **À jour pour la 1.2.0** (2026-08-26) : le build, le texte de la page et le devlog sont tous
+> les trois en ligne. Plus aucune mention du pavé nulle part.
 
 ---
 
