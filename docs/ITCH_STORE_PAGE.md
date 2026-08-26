@@ -10,6 +10,9 @@
 > ⚠ **La page elle-même est en ANGLAIS depuis la 1.1.0** (2026-08-25) : le texte réellement
 > collé est celui de [`ITCH_STORE_PAGE_EN.md`](ITCH_STORE_PAGE_EN.md). Ce fichier-ci reste la
 > référence française — **toute correction se fait DANS LES DEUX**, sans quoi l'un des deux ment.
+>
+> **À jour pour la 1.2.0** (2026-08-26). ⚠ Le build 1.2.0 est en ligne, **le texte de la page
+> ne l'est pas encore** : elle décrit toujours le pavé de la 1.1.0.
 
 ---
 
@@ -45,7 +48,7 @@ son blob, pas à appuyer plus vite.
 
 ### Ce qu'il y a dans la partie
 
-- **À deux sur le même clavier** — ou sur le **même écran au doigt**, chacun son bord —, ou
+- **À deux sur le même clavier** — ou sur le **même écran au doigt**, chacun sa moitié —, ou
   **contre l'ordinateur** : cinq niveaux, de Tranquille à Implacable.
 - **Le placement donne la direction, l'élan donne la vitesse.** Un blob immobile renvoie au
   plancher, un blob qui retombe sur la balle lui ajoute sa chute : le smash sort à 20 u/s là où
@@ -78,13 +81,17 @@ rejoue parce que le point précédent s'est joué de peu.
 ### Au doigt, sur téléphone et tablette
 
 Le jeu se joue aussi **au doigt, à un comme à deux joueurs**, en tenant l'appareil **en
-largeur**. Les commandes apparaissent à l'écran dès le premier contact : un pavé
-gauche/droite et un bouton de saut par joueur, plus un bouton de pause en haut à droite —
-seul accès au menu, puisqu'il n'y a pas d'Échap.
+largeur**. Les commandes apparaissent à l'écran dès le premier contact.
 
-- **À deux**, chacun tient son bord de l'écran avec ses trois boutons.
-- **Contre l'ordinateur**, les commandes s'écartent aux deux bouts : déplacement sous le
-  pouce gauche, saut sous le pouce droit.
+**Le blob suit le doigt.** Chacun glisse où il veut dans sa moitié d'écran : l'endroit
+touché est l'endroit du terrain où le blob court. Rien à viser, rien à doser — le doigt
+désigne littéralement la place voulue, et aucun pavé n'occupe le bas de l'écran, là où
+vivent justement les blobs. Le saut garde son bouton, et la pause le sien, en haut à
+droite : sans Échap, c'est le seul accès au menu, donc à la revanche, au changement
+d'adversaire et aux réglages.
+
+Un doigt reste au camp où il s'est posé, même quand il traverse le milieu de l'écran :
+courir vers le filet ne fait jamais prendre la main sur le blob d'en face.
 
 En portrait, un panneau demande de tourner l'appareil : le terrain ne tient pas dans la
 hauteur.

@@ -7,11 +7,16 @@
 > Page: <https://drangoht.itch.io/smily-volley> — **web only**, pushed to the `html5` channel by
 > `tools/release_itch.ps1`.
 >
-> **Up to date for 1.1.0** (2026-08-25), the touch release.
+> **Up to date for 1.2.0** (2026-08-26), the release where the blob follows your finger.
 >
-> ✅ **PUBLISHED**: this English copy is live on the page since 2026-08-25 (build #1915521 on
-> the `html5` channel). The page description, tagline, tags, embed options and the whole
-> Classification tab were set from this file, and the devlog below was posted as
+> ✅ **BUILD PUBLISHED**: 1.2.0 was pushed to the `html5` channel on 2026-08-26 (build #1917589,
+> from #1915521). ⚠ **The page text has not been updated yet**: sections 3 and 4 below describe
+> the touch controls of 1.2.0, while the live page still describes the 1.1.0 pad. The § 7 devlog
+> is written and **not yet posted**.
+>
+> The English copy has been live on the page since 2026-08-25 (build #1915521). The description,
+> tagline, tags, embed options and the whole Classification tab were set from this file, and the
+> 1.1.0 devlog was posted as
 > [« Now playable with your fingers »](https://drangoht.itch.io/smily-volley/devlog/1640647/now-playable-with-your-fingers-two-players-on-one-phone).
 
 ---
@@ -48,8 +53,8 @@ not to press faster.
 
 ### What's in a match
 
-- **Two players on one keyboard** — or **on one screen with your fingers**, each holding their own
-  edge — or **against the computer**: five levels, from Easygoing to Relentless.
+- **Two players on one keyboard** — or **on one screen with your fingers**, each with their own
+  half — or **against the computer**: five levels, from Easygoing to Relentless.
 - **Placement gives direction, momentum gives speed.** A still blob returns at the floor value; a
   blob falling onto the ball adds its own drop — the spike comes out at 20 units/s where a calm
   rally sits around 5. A fast ball loses half of its excess on every hit and settles back down on
@@ -67,17 +72,15 @@ The web version plays on phones and tablets, **for one player and for two**, hol
 **in landscape**. Controls appear on screen the moment a finger touches it — nothing shows up on a
 desktop machine.
 
-Each player gets **three buttons**: a single-piece left/right pad and a jump button. The layout
-follows how many hands are actually free:
+**Your blob follows your finger.** Each player slides anywhere in their own half of the screen:
+the spot you touch is the spot on the court your blob runs to. Nothing to aim, nothing to meter —
+your finger points at the place you want, and no pad sits along the bottom of the screen, which is
+exactly where the blobs live. Jump keeps its own button, and there is a **pause button** in the
+top-right corner: with no Esc key on a phone it is the only way into the menu, and so the only way
+to replay, switch opponent or open the options.
 
-- **Two players** — each holds their own edge of the screen with their own three buttons.
-- **Against the computer** — the controls spread out to both ends: movement under the left thumb,
-  jump under the right, since the second hand is free.
-
-The pad is **one continuous piece**, not two buttons with a gap: the border is in the middle, and
-sliding from one side to the other without lifting your thumb changes direction. There is a **pause
-button** in the top-right corner — on a phone it is the only way into the menu, so it is also the
-only way to replay, switch opponent or open the options. Held in portrait, a panel asks you to turn
+A finger belongs to the half it landed in, even when it crosses the middle of the screen — running
+towards the net never takes over your opponent's blob. Held in portrait, a panel asks you to turn
 the device: the court is wider than it is tall, and it does not fit in the other direction.
 
 ### What this isn't
@@ -97,8 +100,8 @@ because the last point was close.
 `Tab` switches between "against the computer" and "two players". `R` restarts the match.
 `Esc` opens the pause menu. Every key rebinds in the options.
 
-**On a touchscreen**, hold the device in landscape: each player gets a left/right pad and a jump
-button on their own side, plus a pause button in the top-right corner.
+**On a touchscreen**, hold the device in landscape: slide a finger anywhere in your own half of
+the screen to move your blob, tap the jump button to jump, and pause from the top-right corner.
 
 ---
 
@@ -135,7 +138,51 @@ button on their own side, plus a pause button in the top-right corner.
 
 ---
 
-## 7. Devlog — version 1.1.0
+## 7. Devlog — version 1.2.0
+
+**Title:** The pad is gone — your blob follows your finger now
+
+**Body:**
+
+The touch controls shipped in 1.1.0 gave each player a left/right pad. It worked, and it was in
+the wrong place: the pad sat along the bottom of the screen, which is exactly the strip where the
+blobs live. You lost sight of the character you were moving at the very moment you moved it.
+
+**So the pad is gone.** Slide anywhere in your own half of the screen instead. The spot you touch
+is the spot on the court your blob runs to — the two halves of the screen are already the two
+halves of the court, so your finger points *literally* at the place you want. There is no
+sensitivity to tune and no gesture to translate, because nothing is being translated.
+
+**It is not faster than the keyboard.** What a finger produces is an axis capped at ±1, exactly
+like a held key: a swipe across the whole screen does not make your blob run faster than a player
+holding a direction. Without that cap, touch would simply be the stronger way to play, and the two
+would no longer be the same game.
+
+**It eases into the target rather than slamming into it.** At full speed the blob would overshoot
+the point you picked, come back, overshoot again — vibrating around your finger instead of
+settling on it. The last stretch is scaled to the distance the blob covers in one physics step,
+which is the only unit that means anything there.
+
+**A finger belongs to the half it landed in**, even once it crosses the middle of the screen.
+Without that, a player running towards the net would start driving their opponent's blob — and
+running towards the net is precisely what this game is about.
+
+**A pale column marks the spot you picked.** It doesn't duplicate your finger, it corrects for it:
+a finger hides the point it touches, and the blob takes a moment to get there. Without the column,
+nothing tells you where the game thinks you pointed.
+
+**And the options can finally be reached with a thumb.** This menu has no scrollbar of its own —
+the visible window follows the current line, and only the keyboard and the mouse wheel ever moved
+it. A phone has neither. You could touch the lines on screen and *nothing in the world* got you to
+the ones below. Two ways in now: drag the list, and tap the overflow arrows, which move three
+lines at a time. They only ever announced that the list continued, which was enough while you had
+a wheel — with a finger, a hint you cannot touch just points at what you can't reach.
+
+The desktop version is unchanged: no touch control appears unless a finger touches the screen.
+
+---
+
+## 8. Devlog — version 1.1.0 *(published 2026-08-25)*
 
 **Title:** Now playable with your fingers — two players on one phone
 
