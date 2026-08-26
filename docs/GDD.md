@@ -322,6 +322,52 @@ lit le caractère réellement imprimé sur la touche dans la disposition active 
 Le bandeau annonce `Q / D` sur un clavier français et `A / D` sur un clavier anglais,
 sans configuration.
 
+### Au doigt
+
+La version web se joue aussi sur téléphone et tablette, **à un joueur comme à deux**,
+l'appareil tenu **en paysage**. Rien ne s'affiche tant qu'aucun doigt n'a touché la
+dalle : sur un portable à écran tactile, un joueur resté au clavier ne voit jamais ces
+commandes, et il retrouve les siennes dès qu'il repose les doigts sur les touches. Les
+deux périphériques cohabitent, aucun n'annule l'autre.
+
+| Action | Geste |
+|---|---|
+| Se déplacer | Glisser n'importe où dans sa moitié d'écran |
+| Sauter | Le bouton rond posé dans sa moitié |
+| Pause | Le bouton rond en haut à droite — `Échap` n'existe pas sur un téléphone |
+
+**Le doigt désigne un endroit du terrain, pas une direction.** Sa position écran est
+reconvertie en point du monde par la caméra, et le blob court vers ce point. Les deux
+camps occupent déjà chacun leur moitié d'écran, qui est leur moitié de terrain : la
+correspondance est gratuite, et il n'y a ni sensibilité ni course à inventer. Seule
+l'abscisse est lue — le joueur glisse donc à la hauteur qui l'arrange, en bas de
+l'écran, loin des blobs qu'il regarde.
+
+**La vitesse reste celle du clavier.** Ce que le doigt produit est un axe borné à ±1,
+exactement comme une touche : un geste qui traverse l'écran ne fait pas courir le blob
+plus vite qu'une touche maintenue. Sans cette borne, le tactile serait *plus fort* que
+le clavier, et les deux modes ne se joueraient plus au même jeu.
+
+**L'axe est dosé sur le dernier segment**, à l'échelle du pas de physique, plutôt que
+rabattu à ±1 jusqu'au contact : à pleine vitesse le blob dépasserait le point visé,
+reviendrait, le dépasserait encore — il vibrerait autour du doigt au lieu de s'y poser.
+
+⚠ **Un doigt appartient au camp où il s'est posé**, même quand il franchit le milieu de
+l'écran. Sans cette mémoire, un joueur qui court vers le filet se mettrait à piloter le
+blob de son adversaire — et courir vers le filet est précisément ce qu'on fait dans ce
+jeu. Le saut, lui, n'a aucune mémoire : son bouton est fixe, un doigt commande ce qu'il
+recouvre en ce moment. Un seul doigt pilote un camp : le second posé ne vole pas la main
+au premier.
+
+La géométrie de tout cela — marges, rayons, seuil de 44 px sous lequel une cible n'est
+plus atteignable au doigt — vit dans `TouchZones`, l'état des doigts dans `TouchInput`,
+et leur traduction en déplacement dans `HumanBlobInput`. Le mode contre l'ordinateur est
+correct sans effort : le blob de droite y a `HumanBlobInput` désactivé, donc le tactile
+suit exactement les camps qu'un humain tient.
+
+> Le tactile se force en dehors d'une dalle : `--touch` en ligne de commande, `?touch`
+> dans l'URL de la version web. Sans quoi il ne serait vérifiable que sur un téléphone.
+
 ---
 
 ## 6. Le terrain
@@ -479,6 +525,19 @@ Volontairement minimale : rien ne doit détourner le regard de la balle.
 | Centre | Service, point marqué, fin de match | Effacé au lâcher de balle |
 | Bas | Rappel des commandes, encre sombre sur le sable | Recomposé selon la disposition clavier et le mode |
 
+**Au doigt, l'aide change de langue.** Elle nommait des touches qu'un joueur mobile n'a
+pas : `Q / D : se déplacer — Z : sauter — Tab : 2 joueurs` devient « Chacun glisse le
+doigt de son côté de l'écran — son bouton pour sauter », et « Appuyez sur R pour
+rejouer » devient « Touchez Pause, en haut à droite, pour rejouer ». La règle « une
+commande annonce sa touche » dit en réalité « annonce **comment** on la déclenche ».
+
+S'y ajoutent trois dessins qui n'existent qu'au doigt : les boutons de saut, le bouton de
+pause, et une **colonne claire** à l'endroit désigné. Cette dernière ne double pas le
+doigt, elle le corrige — le doigt cache le point qu'il touche, et le blob met un instant
+à l'atteindre. Le portrait, lui, est refusé derrière un panneau plein écran, décidé sur
+« cet appareil est-il tactile ? » et non sur « le joueur s'en sert-il en ce moment ? » :
+tourner son téléphone ne cesse pas d'en faire un téléphone.
+
 Le mode se change aussi en jeu (`Tab`) et le match se relance en jeu (`R`) : le menu
 n'est jamais un passage obligé pour les gestes courants.
 
@@ -573,6 +632,22 @@ traverser l'écran d'un coup de doigt, et le pas ne dépend pas de l'amplitude r
 et un `+` : sans eux, le clic sur la ligne équivaut à la flèche droite et rien ne fait
 redescendre une valeur. Ces boutons sont enfants de la ligne, donc au-dessus de son
 bandeau : le clic leur revient, pas à elle.
+
+**Au doigt, on fait défiler en glissant, et les flèches de débordement se touchent.** Le
+défilement de ce menu n'existe pas séparément : la fenêtre visible se déduit de la ligne
+courante, que seuls le clavier et la molette déplaçaient. Sur un téléphone il n'y a ni
+l'un ni l'autre — le joueur touchait les lignes affichées et rien ne lui donnait accès aux
+suivantes. Un appui sur une flèche déplace de trois lignes ; elles ne faisaient
+qu'annoncer que la liste continue, ce qui suffisait tant qu'on avait une molette, mais au
+doigt une indication qu'on ne peut pas toucher ne fait que désigner ce qu'on n'atteint
+pas.
+
+⚠ Le glissement lit la dalle directement plutôt que par l'`IDragHandler` d'uGUI : celui-ci
+ne naît que si le pointeur bouge **après** avoir été enfoncé, sur des images distinctes.
+Le composant vivait, ses nombres étaient bons, et il ne recevait aucun événement. ⚠ Un
+second défaut se cachait derrière : `SetGameControls(false)` est appelé à **chaque** image
+tant qu'un menu est ouvert — ce n'est pas une transition, c'est un état réaffirmé — et il
+remettait le glissement à zéro juste avant que le menu ne le lise.
 
 **Tout boucle.** La dernière ligne d'un écran ramène à la première ; le dernier choix
 d'un réglage ramène au premier. Une liste qui bute à son extrémité ne dit pas au joueur
@@ -815,12 +890,15 @@ SmilyVolley (assembly runtime)
 │   ├── CameraFitter     Cadrage adaptatif au format d'écran
 │   ├── BlobStyle        Les trois interprétations graphiques
 │   ├── GameSettings     Réglages du joueur et leur persistance
+│   ├── TouchZones       Géométrie des cibles tactiles (la seule à la connaître)
+│   ├── BuildInfo        Version et commit du binaire, pour le rapport de bug
 │   └── Side             Camp du terrain (la valeur enum est le signe sur X)
 ├── Gameplay/
 │   ├── BlobJelly        Gelée simulée : anneau de ressorts et maillage déformable
 │   ├── BlobController   Déplacement manuel, saut, butées
-│   ├── BlobInput        Abstraction des commandes (clavier ou IA)
-│   ├── HumanBlobInput   Clavier via Input System
+│   ├── BlobInput        Abstraction des commandes (clavier, doigt ou IA)
+│   ├── HumanBlobInput   Clavier via Input System, et doigt via TouchInput
+│   ├── TouchInput       État des doigts (le seul fichier qui lise la dalle)
 │   ├── AiBlobInput      Prédiction balistique et placement
 │   ├── BallController   Frappe radiale, plafond de vitesse, événements
 │   ├── GroundShadow     Ombre projetée, indicateur de hauteur
@@ -832,14 +910,18 @@ SmilyVolley (assembly runtime)
 └── UI/
     ├── HudController    Score, messages, aide
     ├── MenuController   Menu principal, options, pause
-    └── MenuRow          Une ligne de menu réutilisable
+    ├── MenuRow          Une ligne de menu réutilisable
+    ├── MenuCursor       Le blob qui désigne la ligne choisie
+    ├── TouchHud         Dessin des commandes tactiles, et porte de leur capture
+    ├── OrientationGate  Panneau qui refuse le portrait sur un appareil tactile
+    └── BuildStampLabel  Tampon de version en bas de l'écran
 
 SmilyVolley.Editor (assembly éditeur, exclu du build)
 ├── SceneBuilder         Assemble la scène complète
 ├── BlobArt              Dessine la peau des blobs et ses matériaux
 ├── PlaceholderArt       Dessine les PNG
 ├── RenderPipelineSetup  Active URP sur tous les niveaux de qualité
-└── BuildTools           Build Windows et réglages projet
+└── BuildTools           Builds Windows et web, et réglages projet
 ```
 
 ### 11.2 Décisions structurantes
@@ -906,6 +988,7 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 | `Audio` *(GameAudio)* | `Music Volume`, `Music Fade In Seconds` | Présence de la musique |
 | `Audio` *(GameAudio)* | `Jump Volume`, `Jump Pitch` | Discrétion de l'appui du saut |
 | `ImpactEffects` | `Hit / Ball Land / Blob Land / Bounce Particles` | Densité des bouffées |
+| `TouchHud` | `Idle / Held Color`, `Glyph Color`, `Marker Color` | Discrétion des commandes tactiles : elles se posent sur le terrain qu'elles cachent |
 
 ---
 
@@ -918,6 +1001,8 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 - ~~**Musique de fond** et son de saut.~~ Fait (§ 10).
 - ~~**Menu principal**~~ : fait (§ 9.1) — mode, difficulté nommée, score cible, son,
   commandes réaffectables, plein écran.
+- ~~**Portage tactile**~~ : fait (§ 5) — le blob suit le doigt, à un joueur comme à
+  deux, et les menus se font défiler au glissement comme à la flèche.
 - **Manette** : l'abstraction `BlobInput` est prête ; il reste à étendre la
   réaffectation, qui ne connaît aujourd'hui que le clavier.
 
@@ -935,7 +1020,6 @@ coûtent une ligne et évitent des habitudes coûteuses à plus grande échelle 
 - Mode tournoi contre une échelle d'IA.
 - Personnages aux réglages distincts (un blob plus rapide mais moins haut).
 - Manette (l'abstraction `BlobInput` est déjà prête ; seule la source change).
-- Portage mobile : deux zones tactiles par camp, la caméra adaptative est déjà en place.
 
 ### Hors périmètre
 
